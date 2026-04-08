@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { MapPin, HelpCircle, ChevronRight, Droplets, Moon, Baby, Heart, ChevronDown, ChevronUp, Clock, ClipboardList, AlertCircle } from 'lucide-react';
-import { mockAppointments, mockFeeds, mockHealth } from '../../lib/mockData';
+import { mockAppointments, mockFeeds, mockHealth, mockSleep, mockDiapers } from '../../lib/mockData';
 
 export const DoctorScreen = () => {
   const [mode, setMode] = useState<'planning' | 'appointment'>('appointment');
@@ -11,6 +11,57 @@ export const DoctorScreen = () => {
 
   const toggleSection = (id: string) => {
     setExpandedSection(expandedSection === id ? null : id);
+  };
+
+  const renderExpandedStats = (type: string) => {
+    switch (type) {
+      case 'feed-stats':
+        return (
+          <div className="text-xs text-muted" style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+            {mockFeeds.slice(0, 3).map(f => (
+              <div key={f.id} className="flex-row space-between" style={{ marginBottom: '4px' }}>
+                <span>{f.feedType === 'breast' ? f.side : 'Bottle'}</span>
+                <span>{f.amount ? `${f.amount}ml` : '15m'}</span>
+              </div>
+            ))}
+          </div>
+        );
+      case 'sleep-stats':
+        return (
+          <div className="text-xs text-muted" style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+            {mockSleep.slice(0, 2).map(s => (
+              <div key={s.id} className="flex-row space-between" style={{ marginBottom: '4px' }}>
+                <span>{new Date(s.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <span>{Math.floor((s.duration || 0) / 3600)}h {Math.floor(((s.duration || 0) % 3600) / 60)}m</span>
+              </div>
+            ))}
+          </div>
+        );
+      case 'diaper-stats':
+        return (
+          <div className="text-xs text-muted" style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+            {mockDiapers.slice(0, 3).map(d => (
+              <div key={d.id} className="flex-row space-between" style={{ marginBottom: '4px' }}>
+                <span>{d.diaperType}</span>
+                <span>{new Date(d.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+            ))}
+          </div>
+        );
+      case 'health-stats':
+        return (
+          <div className="text-xs text-muted" style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+            {mockHealth.map(h => (
+              <div key={h.id} className="flex-row space-between" style={{ marginBottom: '4px' }}>
+                <span>{h.healthType}</span>
+                <span>{h.value || h.medicationName}</span>
+              </div>
+            ))}
+          </div>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -43,7 +94,6 @@ export const DoctorScreen = () => {
             </div>
           )}
 
-          {/* Time Window Switcher */}
           <div className="flex-row" style={{ justifyContent: 'center', marginBottom: '1.5rem', gap: '0.5rem' }}>
             {['24h', '48h', '7d'].map((w) => (
               <button 
@@ -58,7 +108,7 @@ export const DoctorScreen = () => {
           </div>
 
           <section>
-            <div className="flex-row space-between" onClick={() => toggleSection('questions')} style={{ marginBottom: '0.75rem' }}>
+            <div className="flex-row space-between" onClick={() => toggleSection('questions')} style={{ marginBottom: '0.75rem', cursor: 'pointer' }}>
               <h4>Parent Questions</h4>
               {expandedSection === 'questions' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </div>
@@ -88,34 +138,21 @@ export const DoctorScreen = () => {
           <section style={{ marginTop: '1.5rem' }}>
             <h4>{timeWindow} Summary</h4>
             <div className="grid-2">
-              <div className="card" onClick={() => toggleSection('feed-stats')} style={{ padding: '1rem' }}>
-                <div className="flex-row text-xs text-muted" style={{ marginBottom: '4px' }}>
-                  <Droplets size={14} className="text-primary" /> <span>Feeding</span>
+              {[
+                { id: 'feed-stats', icon: <Droplets size={14} className="text-primary" />, label: 'Feeding', value: '14 Sessions', detail: 'Avg: 2h 45m' },
+                { id: 'sleep-stats', icon: <Moon size={14} className="text-primary" />, label: 'Sleep', value: '16.5 Hours', detail: 'Longest: 4.5h' },
+                { id: 'diaper-stats', icon: <Baby size={14} className="text-primary" />, label: 'Diapers', value: '12 Total', detail: '8 Wet, 4 Dirty' },
+                { id: 'health-stats', icon: <Heart size={14} className="text-danger" />, label: 'Health', value: '1 Fever', detail: 'Max: 38.2°C' },
+              ].map((stat) => (
+                <div key={stat.id} className="card" onClick={() => toggleSection(stat.id)} style={{ padding: '1rem', cursor: 'pointer', transition: 'all 0.2s ease' }}>
+                  <div className="flex-row text-xs text-muted" style={{ marginBottom: '4px' }}>
+                    {stat.icon} <span>{stat.label}</span>
+                  </div>
+                  <div className="font-bold">{stat.value}</div>
+                  <div className="text-xs text-muted">{stat.detail}</div>
+                  {expandedSection === stat.id && renderExpandedStats(stat.id)}
                 </div>
-                <div className="font-bold">14 Sessions</div>
-                <div className="text-xs text-muted">Avg: 2h 45m</div>
-              </div>
-              <div className="card" onClick={() => toggleSection('sleep-stats')} style={{ padding: '1rem' }}>
-                <div className="flex-row text-xs text-muted" style={{ marginBottom: '4px' }}>
-                  <Moon size={14} className="text-primary" /> <span>Sleep</span>
-                </div>
-                <div className="font-bold">16.5 Hours</div>
-                <div className="text-xs text-muted">Longest: 4.5h</div>
-              </div>
-              <div className="card" onClick={() => toggleSection('diaper-stats')} style={{ padding: '1rem' }}>
-                <div className="flex-row text-xs text-muted" style={{ marginBottom: '4px' }}>
-                  <Baby size={14} className="text-primary" /> <span>Diapers</span>
-                </div>
-                <div className="font-bold">12 Total</div>
-                <div className="text-xs text-muted">8 Wet, 4 Dirty</div>
-              </div>
-              <div className="card" onClick={() => toggleSection('health-stats')} style={{ padding: '1rem' }}>
-                <div className="flex-row text-xs text-muted" style={{ marginBottom: '4px' }}>
-                  <Heart size={14} className="text-danger" /> <span>Health</span>
-                </div>
-                <div className="font-bold">1 Fever</div>
-                <div className="text-xs text-muted">Max: 38.2°C</div>
-              </div>
+              ))}
             </div>
           </section>
 

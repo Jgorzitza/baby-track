@@ -53,8 +53,11 @@ const AuthScreen = ({ onLogin }: { onLogin: () => void }) => (
   </div>
 );
 
+import { useKeyboardResilience } from './lib/useKeyboardResilience';
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  useKeyboardResilience();
 
   if (!isAuthenticated) {
     return <AuthScreen onLogin={() => setIsAuthenticated(true)} />;

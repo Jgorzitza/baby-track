@@ -4,27 +4,30 @@ import { mockAppointments } from '../../lib/mockData';
 
 export const DoctorQuestionsScreen = () => {
   const navigate = useNavigate();
-  const appointment = mockAppointments[0];
+  const appointment = mockAppointments.length > 0 ? mockAppointments[0] : null;
 
   return (
     <div className="doctor-questions-screen">
-      <div className="flex-row" style={{ marginBottom: '1.5rem' }} onClick={() => navigate(-1)}>
+      <div className="flex-row" style={{ marginBottom: '1.5rem', cursor: 'pointer' }} onClick={() => navigate(-1)}>
         <ArrowLeft size={20} />
         <span className="font-bold">Back to Doctor Mode</span>
       </div>
 
       <div className="card">
-        <h3>Questions for {appointment.provider}</h3>
+        <h3>Questions for {appointment?.provider || 'Next Appointment'}</h3>
         <p className="text-muted text-sm">Prepare these questions before your next visit.</p>
       </div>
 
       <section>
-        {appointment.questions.map((q, i) => (
-          <div key={i} className="card flex-row space-between" style={{ padding: '1rem', marginBottom: '0.75rem' }}>
+        {(appointment?.questions || []).map((q) => (
+          <div key={q} className="card flex-row space-between" style={{ padding: '1rem', marginBottom: '0.75rem' }}>
             <span className="text-sm">{q}</span>
             <Trash2 size={18} className="text-danger" style={{ opacity: 0.6 }} />
           </div>
         ))}
+        {(appointment?.questions || []).length === 0 && (
+          <p className="text-center text-muted text-sm">No questions listed yet.</p>
+        )}
       </section>
 
       <div className="card" style={{ marginTop: '1rem' }}>

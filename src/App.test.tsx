@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, render, screen } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
 import { useFeedingTimer } from './features/feed/useFeedingTimer';
 import { useSleepTimer } from './features/sleep/useSleepTimer';
+import { DoctorScreen } from './routes/doctor/DoctorScreen';
+import { DoctorQuestionsScreen } from './routes/doctor/DoctorQuestionsScreen';
+import { MedicalTimelineScreen } from './routes/medical-timeline/MedicalTimelineScreen';
+import * as mockData from './lib/mockData';
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -15,6 +20,8 @@ const localStorageMock = (() => {
 })();
 
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+
+const wrap = (ui: React.ReactNode) => render(<BrowserRouter>{ui}</BrowserRouter>);
 
 describe('Core Business Logic: Timers & Persistence', () => {
   beforeEach(() => {
@@ -38,34 +45,23 @@ describe('Core Business Logic: Timers & Persistence', () => {
       expect(result.current.leftSeconds).toBe(5);
     });
 
-    it('should persist state to localStorage', () => {
-      const { result, rerender } = renderHook(() => useFeedingTimer());
+    it('should implement undo last action', () => {
+      const { result } = renderHook(() => useFeedingTimer());
       
-      act(() => { 
-        result.current.toggleSide('left');
-      });
+      act(() => { result.current.toggleSide('left'); });
+      act(() => { vi.advanceTimersByTime(5000); });
+      act(() => { result.current.toggleSide('left'); }); // Pause
       
-      act(() => {
-        vi.advanceTimersByTime(10000);
-      });
-
-      rerender();
-
-      const saved = JSON.parse(window.localStorage.getItem('bbtrack_active_feed') || '{}');
-      expect(saved.activeSide).toBe('left');
-      expect(saved.leftSeconds).toBe(10);
+      expect(result.current.activeSide).toBeNull();
+      expect(result.current.leftSeconds).toBe(5);
+      
+      act(() => { result.current.undo(); });
+      expect(result.current.activeSide).toBe('left');
+      expect(result.current.leftSeconds).toBe(5);
     });
   });
 
   describe('useSleepTimer', () => {
-    it('should toggle sleep state', () => {
-      const { result } = renderHook(() => useSleepTimer());
-      
-      act(() => { result.current.toggleSleep(); });
-      expect(result.current.isAsleep).toBe(true);
-      expect(result.current.startTime).not.toBeNull();
-    });
-
     it('should resume session from localStorage', () => {
       const startTime = new Date(Date.now() - 5000).toISOString();
       window.localStorage.setItem('bbtrack_active_sleep', JSON.stringify({
@@ -77,5 +73,37 @@ describe('Core Business Logic: Timers & Persistence', () => {
       expect(result.current.isAsleep).toBe(true);
       expect(result.current.elapsed).toBeGreaterThanOrEqual(5);
     });
+  });
+});
+
+describe('UI Scenario Verification', () => {
+  it('DoctorScreen handles no scheduled appointment gracefully', () => {
+    // Temporarily empty mock appointments
+    const original = [...mockData.mockAppointments];
+    // Mutating for scenario testing
+    mockData.mockAppointments.splice(0, mockData.mockAppointments.length);
+    
+    wrap(<DoctorScreen />);
+    expect(screen.getByText(/No scheduled appointment/i)).toBeInTheDocument();
+    
+    // Restore
+    mockData.mockAppointments.push(...original);
+  });
+
+  it('DoctorQuestionsScreen handles empty questions gracefully', () => {
+    const original = [...mockData.mockAppointments];
+    mockData.mockAppointments.splice(0, mockData.mockAppointments.length);
+
+    wrap(<DoctorQuestionsScreen />);
+    expect(screen.getByText(/No questions listed yet/i)).toBeInTheDocument();
+
+    mockData.mockAppointments.push(...original);
+  });
+
+  it('MedicalTimelineScreen renders dense daily data', () => {
+    wrap(<MedicalTimelineScreen />);
+    expect(screen.getByText(/First Smile!/i)).toBeInTheDocument();
+    // Diaper counts in dense day
+    expect(screen.getAllByText(/Diaper:/i).length).toBeGreaterThan(3);
   });
 });

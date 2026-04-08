@@ -1,21 +1,66 @@
-import { ArrowLeft, Filter, Droplets, Moon, Baby, Heart } from 'lucide-react';
+import { ArrowLeft, Filter, Droplets, Moon, Baby, Heart, Calendar, LineChart, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { mockFeeds, mockHealth, mockSleep, mockDiapers } from '../../lib/mockData';
+import { mockFeeds, mockHealth, mockSleep, mockDiapers, mockAppointments } from '../../lib/mockData';
+import { useMemo } from 'react';
 
 export const MedicalTimelineScreen = () => {
   const navigate = useNavigate();
   
-  const allEvents = [
-    ...mockFeeds.map(f => ({ ...f, icon: <Droplets size={16} className="text-primary" />, title: `Feed: ${f.feedType}` })),
-    ...mockHealth.map(h => ({ ...h, icon: <Heart size={16} className="text-danger" />, title: `Health: ${h.healthType}` })),
-    ...mockSleep.map(s => ({ ...s, icon: <Moon size={16} className="text-primary-dark" />, title: 'Sleep' })),
-    ...mockDiapers.map(d => ({ ...d, icon: <Baby size={16} className="text-success" />, title: `Diaper: ${d.diaperType}` })),
-  ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  // Use useMemo to ensure stability and move Date construction out of direct render cycle
+  const allEvents = useMemo(() => {
+    const todayStr = new Date().toISOString();
+    
+    return [
+      ...mockFeeds.map(f => ({ 
+        id: f.id, 
+        timestamp: f.timestamp, 
+        icon: <Droplets size={16} className="text-primary" />, 
+        title: `Feed: ${f.feedType}`,
+        notes: f.outcome ? `Outcome: ${f.outcome}` : undefined
+      })),
+      ...mockHealth.map(h => ({ 
+        id: h.id, 
+        timestamp: h.timestamp, 
+        icon: h.healthType === 'growth' ? <LineChart size={16} className="text-success" /> : <Heart size={16} className="text-danger" />, 
+        title: `${h.healthType.charAt(0).toUpperCase() + h.healthType.slice(1)}`,
+        notes: h.medicationName ? `${h.medicationName} (${h.dosage})` : h.value ? `${h.value}${h.unit || ''}` : h.symptomName
+      })),
+      ...mockSleep.map(s => ({ 
+        id: s.id, 
+        timestamp: s.startTime, 
+        icon: <Moon size={16} className="text-primary-dark" />, 
+        title: 'Sleep',
+        notes: s.duration ? `${Math.floor(s.duration / 3600)}h ${Math.floor((s.duration % 3600) / 60)}m` : 'In progress'
+      })),
+      ...mockDiapers.map(d => ({ 
+        id: d.id, 
+        timestamp: d.timestamp, 
+        icon: <Baby size={16} className="text-success" />, 
+        title: `Diaper: ${d.diaperType}`,
+        notes: d.stoolColor ? `${d.stoolColor}, ${d.stoolConsistency}` : undefined
+      })),
+      ...mockAppointments.map(a => ({
+        id: a.id,
+        timestamp: a.dateTime,
+        icon: <Calendar size={16} className="text-warning" />,
+        title: `Appointment: ${a.provider}`,
+        notes: a.notes
+      })),
+      // Mocking a "Notable Event"
+      {
+        id: 'note-1',
+        timestamp: todayStr,
+        icon: <Star size={16} className="text-accent" />,
+        title: 'First Smile!',
+        notes: 'Captured on camera today!'
+      }
+    ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, []);
 
   return (
     <div className="medical-timeline-screen">
       <div className="flex-row space-between" style={{ marginBottom: '1.5rem' }}>
-        <div className="flex-row" onClick={() => navigate(-1)}>
+        <div className="flex-row" style={{ cursor: 'pointer' }} onClick={() => navigate(-1)}>
           <ArrowLeft size={20} />
           <span className="font-bold">Medical Timeline</span>
         </div>
@@ -42,7 +87,7 @@ export const MedicalTimelineScreen = () => {
               <div className="text-xs text-muted" style={{ marginTop: '2px' }}>
                 {new Date(event.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })}
               </div>
-              {event.notes && <p className="text-xs" style={{ marginTop: '0.5rem', marginBottom: 0 }}>{event.notes}</p>}
+              {event.notes && <p className="text-xs" style={{ marginTop: '0.5rem', marginBottom: 0, color: 'var(--text)' }}>{event.notes}</p>}
             </div>
           </div>
         ))}

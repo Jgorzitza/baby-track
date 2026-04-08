@@ -8,7 +8,7 @@ import { useUnitPrefs } from '../../lib/useUnitPrefs';
 export const FeedScreen = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { activeSide, leftSeconds, rightSeconds, toggleSide, reset, formatTime, totalSeconds } = useFeedingTimer();
+  const { activeSide, leftSeconds, rightSeconds, toggleSide, undo, reset, formatTime, totalSeconds, canUndo } = useFeedingTimer();
   const [outcome, setOutcome] = useState<FeedOutcome | ''>('');
   const [feedType, setFeedType] = useState<'breast' | 'bottle'>(() => {
     return (location.state as { defaultType?: 'breast' | 'bottle' })?.defaultType || 'breast';
@@ -89,10 +89,15 @@ export const FeedScreen = () => {
                   <RotateCcw size={18} />
                   <span className="text-sm font-bold">Reset</span>
                 </div>
-                <div className="flex-row text-muted" style={{ cursor: 'pointer' }}>
+                <button 
+                  className="flex-row text-muted" 
+                  onClick={undo} 
+                  disabled={!canUndo}
+                  style={{ cursor: canUndo ? 'pointer' : 'not-allowed', opacity: canUndo ? 1 : 0.3, background: 'none', border: 'none', padding: 0, color: 'inherit' }}
+                >
                   <Undo2 size={18} />
                   <span className="text-sm font-bold">Undo</span>
-                </div>
+                </button>
               </div>
               <div className="font-bold text-primary-dark">
                 Total: {formatTime(totalSeconds)}

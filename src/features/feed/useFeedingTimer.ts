@@ -7,23 +7,33 @@ interface SavedFeedState {
   leftSeconds: number;
   rightSeconds: number;
   lastUpdated: number;
+  history: Array<{
+    side: 'left' | 'right' | null;
+    timestamp: number;
+    leftSeconds: number;
+    rightSeconds: number;
+  }>;
 }
 
 const getInitialState = (): SavedFeedState => {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
-    const state: SavedFeedState = JSON.parse(saved);
-    const now = Date.now();
-    const diff = Math.floor((now - state.lastUpdated) / 1000);
-    
-    if (state.activeSide === 'left') {
-      return { ...state, leftSeconds: state.leftSeconds + diff };
-    } else if (state.activeSide === 'right') {
-      return { ...state, rightSeconds: state.rightSeconds + diff };
+    try {
+      const state: SavedFeedState = JSON.parse(saved);
+      const now = Date.now();
+      const diff = Math.floor((now - state.lastUpdated) / 1000);
+      
+      if (state.activeSide === 'left') {
+        return { ...state, leftSeconds: state.leftSeconds + diff };
+      } else if (state.activeSide === 'right') {
+        return { ...state, rightSeconds: state.rightSeconds + diff };
+      }
+      return state;
+    } catch {
+      // Fallback if JSON is corrupt
     }
-    return state;
   }
-  return { activeSide: null, leftSeconds: 0, rightSeconds: 0, lastUpdated: 0 };
+  return { activeSide: null, leftSeconds: 0, rightSeconds: 0, lastUpdated: 0, history: [] };
 };
 
 export const useFeedingTimer = () => {
@@ -31,6 +41,7 @@ export const useFeedingTimer = () => {
   const [activeSide, setActiveSide] = useState<'left' | 'right' | null>(initialState.activeSide);
   const [leftSeconds, setLeftSeconds] = useState(initialState.leftSeconds);
   const [rightSeconds, setRightSeconds] = useState(initialState.rightSeconds);
+  const [history, setHistory] = useState(initialState.history);
   
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -41,9 +52,10 @@ export const useFeedingTimer = () => {
       leftSeconds,
       rightSeconds,
       lastUpdated: Date.now(),
+      history,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [activeSide, leftSeconds, rightSeconds]);
+  }, [activeSide, leftSeconds, rightSeconds, history]);
 
   useEffect(() => {
     if (activeSide) {
@@ -61,6 +73,9 @@ export const useFeedingTimer = () => {
   }, [activeSide]);
 
   const toggleSide = (side: 'left' | 'right') => {
+    // Save current state to history before changing
+    setHistory(prev => [...prev, { side: activeSide, timestamp: Date.now(), leftSeconds, rightSeconds }].slice(-10));
+    
     if (activeSide === side) {
       setActiveSide(null);
     } else {
@@ -68,10 +83,20 @@ export const useFeedingTimer = () => {
     }
   };
 
+  const undo = () => {
+    if (history.length === 0) return;
+    const last = history[history.length - 1];
+    setHistory(prev => prev.slice(0, -1));
+    setActiveSide(last.side);
+    setLeftSeconds(last.leftSeconds);
+    setRightSeconds(last.rightSeconds);
+  };
+
   const reset = () => {
     setActiveSide(null);
     setLeftSeconds(0);
     setRightSeconds(0);
+    setHistory([]);
     localStorage.removeItem(STORAGE_KEY);
   };
 
@@ -86,8 +111,10 @@ export const useFeedingTimer = () => {
     leftSeconds,
     rightSeconds,
     toggleSide,
+    undo,
     reset,
     formatTime,
-    totalSeconds: leftSeconds + rightSeconds
+    totalSeconds: leftSeconds + rightSeconds,
+    canUndo: history.length > 0
   };
 };
