@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 const STORAGE_KEY = 'bbtrack_active_feed';
 
 interface SavedFeedState {
   activeSide: 'left' | 'right' | null;
-  leftSeconds: number;
-  rightSeconds: number;
+  leftSecondsAccumulated: number;
+  rightSecondsAccumulated: number;
+  currentSideStartTime: number | null;
   lastUpdated: number;
   history: Array<{
     side: 'left' | 'right' | null;
@@ -19,8 +20,9 @@ const getInitialState = (): SavedFeedState => {
   const saved = localStorage.getItem(STORAGE_KEY);
   const defaultState: SavedFeedState = { 
     activeSide: null, 
-    leftSeconds: 0, 
-    rightSeconds: 0, 
+    leftSecondsAccumulated: 0, 
+    rightSecondsAccumulated: 0, 
+    currentSideStartTime: null,
     lastUpdated: 0, 
     history: [] 
   };
@@ -28,22 +30,11 @@ const getInitialState = (): SavedFeedState => {
   if (saved) {
     try {
       const state = JSON.parse(saved);
-      const now = Date.now();
-      const diff = Math.floor((now - (state.lastUpdated || now)) / 1000);
-      
-      // Merge with defaultState to handle missing fields (schema evolution)
-      const merged: SavedFeedState = {
+      return {
         ...defaultState,
         ...state,
         history: Array.isArray(state.history) ? state.history : []
       };
-
-      if (merged.activeSide === 'left') {
-        merged.leftSeconds += diff;
-      } else if (merged.activeSide === 'right') {
-        merged.rightSeconds += diff;
-      }
-      return merged;
     } catch {
       return defaultState;
     }
@@ -52,48 +43,81 @@ const getInitialState = (): SavedFeedState => {
 };
 
 export const useFeedingTimer = () => {
-  // Use a lazy initializer for useState to avoid repeated getInitialState calls
   const [timerState, setTimerState] = useState<SavedFeedState>(getInitialState);
   
-  const { activeSide, leftSeconds, rightSeconds, history } = timerState;
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Initialize display time directly from state to avoid synchronous set in effect
+  const [displayTime, setDisplayTime] = useState(() => {
+    const now = Date.now();
+    let left = timerState.leftSecondsAccumulated;
+    let right = timerState.rightSecondsAccumulated;
+    if (timerState.activeSide === 'left' && timerState.currentSideStartTime) {
+      left += Math.floor((now - timerState.currentSideStartTime) / 1000);
+    } else if (timerState.activeSide === 'right' && timerState.currentSideStartTime) {
+      right += Math.floor((now - timerState.currentSideStartTime) / 1000);
+    }
+    return { left, right };
+  });
+  
+  const { activeSide, leftSecondsAccumulated, rightSecondsAccumulated, currentSideStartTime, history } = timerState;
 
-  // Save to localStorage whenever state changes
+  useEffect(() => {
+    if (!activeSide) {
+      // Sync on next tick to avoid eslint-react warning
+      const handle = requestAnimationFrame(() => {
+        setDisplayTime({ left: leftSecondsAccumulated, right: rightSecondsAccumulated });
+      });
+      return () => cancelAnimationFrame(handle);
+    }
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      let left = leftSecondsAccumulated;
+      let right = rightSecondsAccumulated;
+
+      if (activeSide === 'left' && currentSideStartTime) {
+        left += Math.floor((now - currentSideStartTime) / 1000);
+      } else if (activeSide === 'right' && currentSideStartTime) {
+        right += Math.floor((now - currentSideStartTime) / 1000);
+      }
+
+      setDisplayTime({ left, right });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeSide, leftSecondsAccumulated, rightSecondsAccumulated, currentSideStartTime]);
+
+  // Sync state to localStorage
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(timerState));
   }, [timerState]);
 
-  useEffect(() => {
-    if (activeSide) {
-      timerRef.current = setInterval(() => {
-        setTimerState(prev => ({
-          ...prev,
-          lastUpdated: Date.now(),
-          leftSeconds: prev.activeSide === 'left' ? prev.leftSeconds + 1 : prev.leftSeconds,
-          rightSeconds: prev.activeSide === 'right' ? prev.rightSeconds + 1 : prev.rightSeconds,
-        }));
-      }, 1000);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
-    }
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [activeSide]);
-
   const toggleSide = (side: 'left' | 'right') => {
+    const timestamp = Date.now();
+    
     setTimerState(prev => {
+      let newLeftAccum = prev.leftSecondsAccumulated;
+      let newRightAccum = prev.rightSecondsAccumulated;
+
+      if (prev.activeSide === 'left' && prev.currentSideStartTime) {
+        newLeftAccum += Math.floor((timestamp - prev.currentSideStartTime) / 1000);
+      } else if (prev.activeSide === 'right' && prev.currentSideStartTime) {
+        newRightAccum += Math.floor((timestamp - prev.currentSideStartTime) / 1000);
+      }
+
       const newActiveSide = prev.activeSide === side ? null : side;
+
       return {
         ...prev,
         activeSide: newActiveSide,
-        lastUpdated: Date.now(),
+        leftSecondsAccumulated: newLeftAccum,
+        rightSecondsAccumulated: newRightAccum,
+        currentSideStartTime: newActiveSide ? timestamp : null,
+        lastUpdated: timestamp,
         history: [...prev.history, { 
           side: prev.activeSide, 
-          timestamp: Date.now(), 
-          leftSeconds: prev.leftSeconds, 
-          rightSeconds: prev.rightSeconds 
+          timestamp, 
+          leftSeconds: prev.leftSecondsAccumulated, 
+          rightSeconds: prev.rightSecondsAccumulated 
         }].slice(-10)
       };
     });
@@ -103,23 +127,27 @@ export const useFeedingTimer = () => {
     setTimerState(prev => {
       if (prev.history.length === 0) return prev;
       const last = prev.history[prev.history.length - 1];
+      const timestamp = Date.now();
       return {
         ...prev,
         activeSide: last.side,
-        leftSeconds: last.leftSeconds,
-        rightSeconds: last.rightSeconds,
-        lastUpdated: Date.now(),
+        leftSecondsAccumulated: last.leftSeconds,
+        rightSecondsAccumulated: last.rightSeconds,
+        currentSideStartTime: last.side ? timestamp : null,
+        lastUpdated: timestamp,
         history: prev.history.slice(0, -1)
       };
     });
   };
 
   const reset = () => {
+    const now = Date.now();
     const defaultState: SavedFeedState = { 
       activeSide: null, 
-      leftSeconds: 0, 
-      rightSeconds: 0, 
-      lastUpdated: 0, 
+      leftSecondsAccumulated: 0, 
+      rightSecondsAccumulated: 0, 
+      currentSideStartTime: null,
+      lastUpdated: now, 
       history: [] 
     };
     setTimerState(defaultState);
@@ -134,13 +162,13 @@ export const useFeedingTimer = () => {
 
   return {
     activeSide,
-    leftSeconds,
-    rightSeconds,
+    leftSeconds: displayTime.left,
+    rightSeconds: displayTime.right,
     toggleSide,
     undo,
     reset,
     formatTime,
-    totalSeconds: leftSeconds + rightSeconds,
+    totalSeconds: displayTime.left + displayTime.right,
     canUndo: history.length > 0
   };
 };

@@ -4,6 +4,7 @@ import { useFeedingTimer } from '../../features/feed/useFeedingTimer';
 import { Droplets, RotateCcw, Check, ChevronRight, Undo2 } from 'lucide-react';
 import { FeedOutcome } from '../../lib/types';
 import { useUnitPrefs } from '../../lib/useUnitPrefs';
+import { mockStore } from '../../lib/mockStore';
 
 export const FeedScreen = () => {
   const location = useLocation();
@@ -13,6 +14,7 @@ export const FeedScreen = () => {
   const [feedType, setFeedType] = useState<'breast' | 'bottle'>(() => {
     return (location.state as { defaultType?: 'breast' | 'bottle' })?.defaultType || 'breast';
   });
+  const [amount, setAmount] = useState<number>(0);
   const { prefs } = useUnitPrefs();
 
   const outcomes: { label: string; value: FeedOutcome }[] = [
@@ -24,6 +26,25 @@ export const FeedScreen = () => {
     { label: 'Refused', value: 'refused' },
     { label: 'Spit-up', value: 'spit_up' },
   ];
+
+  const handleFinish = () => {
+    if (feedType === 'breast' && totalSeconds === 0) return;
+    if (feedType === 'bottle' && amount === 0) return;
+
+    mockStore.addFeed({
+      type: 'feed',
+      feedType,
+      side: feedType === 'breast' ? (leftSeconds > 0 && rightSeconds > 0 ? 'both' : leftSeconds > 0 ? 'left' : 'right') : undefined,
+      durationLeft: feedType === 'breast' ? leftSeconds : undefined,
+      durationRight: feedType === 'breast' ? rightSeconds : undefined,
+      amount: feedType === 'bottle' ? amount : undefined,
+      unit: feedType === 'bottle' ? (prefs.volume as 'ml' | 'oz') : undefined,
+      outcome: outcome || 'good'
+    });
+
+    reset();
+    navigate('/');
+  };
 
   return (
     <div className="feed-screen">
@@ -107,11 +128,17 @@ export const FeedScreen = () => {
         ) : (
           <div className="form-group" style={{ margin: '1.5rem 0' }}>
             <label className="form-label">Amount ({prefs.volume})</label>
-            <input type="number" className="form-control" placeholder="0" />
+            <input 
+              type="number" 
+              className="form-control" 
+              placeholder="0" 
+              value={amount || ''} 
+              onChange={(e) => setAmount(Number(e.target.value))} 
+            />
             <div className="grid-3" style={{ marginTop: '0.5rem' }}>
-              <button className="btn btn-secondary text-sm" style={{ height: 40 }}>{prefs.volume === 'ml' ? '60' : '2'}</button>
-              <button className="btn btn-secondary text-sm" style={{ height: 40 }}>{prefs.volume === 'ml' ? '90' : '3'}</button>
-              <button className="btn btn-secondary text-sm" style={{ height: 40 }}>{prefs.volume === 'ml' ? '120' : '4'}</button>
+              <button className="btn btn-secondary text-sm" style={{ height: 40 }} onClick={() => setAmount(prefs.volume === 'ml' ? 60 : 2)}>{prefs.volume === 'ml' ? '60' : '2'}</button>
+              <button className="btn btn-secondary text-sm" style={{ height: 40 }} onClick={() => setAmount(prefs.volume === 'ml' ? 90 : 3)}>{prefs.volume === 'ml' ? '90' : '3'}</button>
+              <button className="btn btn-secondary text-sm" style={{ height: 40 }} onClick={() => setAmount(prefs.volume === 'ml' ? 120 : 4)}>{prefs.volume === 'ml' ? '120' : '4'}</button>
             </div>
           </div>
         )}
@@ -143,7 +170,7 @@ export const FeedScreen = () => {
         </section>
 
         <div style={{ marginTop: '2rem' }}>
-          <button className="btn btn-success btn-block" style={{ height: 60, fontSize: '1.1rem' }}>
+          <button className="btn btn-success btn-block" style={{ height: 60, fontSize: '1.1rem' }} onClick={handleFinish}>
             <Check size={24} />
             <span>Finish Session</span>
           </button>
@@ -151,7 +178,7 @@ export const FeedScreen = () => {
       </div>
 
       <section style={{ marginTop: '1.5rem' }}>
-        <div className="flex-row space-between" onClick={() => navigate('/timeline')}>
+        <div className="flex-row space-between" onClick={() => navigate('/timeline')} style={{ cursor: 'pointer' }}>
           <h4>Recent History</h4>
           <ChevronRight size={20} className="text-muted" />
         </div>

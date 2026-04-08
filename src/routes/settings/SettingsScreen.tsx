@@ -1,8 +1,10 @@
-import { User, Users, Bell, Shield, LogOut, ChevronRight, Settings2 } from 'lucide-react';
+import { User, Users, Bell, Shield, LogOut, ChevronRight, Settings2, Download } from 'lucide-react';
 import { useUnitPrefs } from '../../lib/useUnitPrefs';
+import { usePWAInstall } from '../../lib/usePWAInstall';
 
 export const SettingsScreen = () => {
   const { prefs, updatePref } = useUnitPrefs();
+  const { isInstallable, install } = usePWAInstall();
 
   return (
     <div className="settings-screen">
@@ -18,7 +20,22 @@ export const SettingsScreen = () => {
         </div>
       </div>
 
-      <section>
+      {isInstallable && (
+        <section>
+          <h4>App Shell</h4>
+          <div className="card" style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', color: 'white' }} onClick={install}>
+            <div className="flex-row">
+              <Download size={24} />
+              <div>
+                <div className="font-bold">Install bbtrack</div>
+                <p className="text-xs" style={{ margin: 0, opacity: 0.9 }}>Add to home screen for a native experience</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section style={{ marginTop: isInstallable ? '1.5rem' : 0 }}>
         <h4>Household</h4>
         <div className="card">
           <div className="flex-row space-between" style={{ paddingBottom: '0.75rem', borderBottom: '1px solid var(--border)' }}>

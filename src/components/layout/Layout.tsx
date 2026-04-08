@@ -1,7 +1,8 @@
-import { Outlet, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import { ReactNode } from 'react';
 import { BottomNav } from './BottomNav';
 
-export const Layout = () => {
+export const Layout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   
   const getTitle = (pathname: string) => {
@@ -14,6 +15,10 @@ export const Layout = () => {
       case '/reports': return 'Reports';
       case '/settings': return 'Settings';
       case '/doctor': return 'Doctor Mode';
+      case '/doctor/questions': return 'Questions';
+      case '/household': return 'Household';
+      case '/baby': return 'Baby Profile';
+      case '/timeline': return 'Medical Timeline';
       default: return 'bbtrack';
     }
   };
@@ -28,7 +33,7 @@ export const Layout = () => {
         <div>{getTitle(location.pathname)}</div>
       </header>
       <main>
-        <Outlet />
+        {children}
       </main>
       <BottomNav />
     </>

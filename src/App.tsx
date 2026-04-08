@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { HomeScreen } from './routes/home/HomeScreen';
 import { FeedScreen } from './routes/feed/FeedScreen';
@@ -61,7 +61,7 @@ const ProtectedLayout = ({ isAuthenticated }: { isAuthenticated: boolean }) => {
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  return <Layout />;
+  return <Layout><Outlet /></Layout>;
 };
 
 function App() {

@@ -3,11 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import { Thermometer, Pill, Activity, LineChart, Check, ChevronRight, Calendar } from 'lucide-react';
 import { HealthType } from '../../lib/types';
 import { useUnitPrefs } from '../../lib/useUnitPrefs';
+import { mockStore } from '../../lib/mockStore';
 
 export const HealthScreen = () => {
   const navigate = useNavigate();
   const [healthType, setHealthType] = useState<HealthType>('temperature');
+  const [value, setValue] = useState<string>('');
+  const [medName, setMedName] = useState<string>('');
+  const [dosage, setDosage] = useState<string>('');
+  const [symptom, setSymptom] = useState<string>('');
   const { prefs } = useUnitPrefs();
+
+  const handleSave = () => {
+    mockStore.addHealth({
+      type: 'health',
+      healthType,
+      value: value ? Number(value) : undefined,
+      unit: healthType === 'temperature' ? prefs.temp : healthType === 'growth' ? prefs.weight : undefined,
+      medicationName: healthType === 'medication' ? medName : undefined,
+      dosage: healthType === 'medication' ? dosage : undefined,
+      symptomName: healthType === 'symptom' ? symptom : undefined,
+    });
+    navigate('/');
+  };
 
   return (
     <div className="health-screen">
@@ -52,18 +70,37 @@ export const HealthScreen = () => {
           {healthType === 'temperature' && (
             <div className="form-group">
               <label className="form-label">Temperature (°{prefs.temp})</label>
-              <input type="number" step="0.1" className="form-control" placeholder={prefs.temp === 'C' ? '37.0' : '98.6'} />
+              <input 
+                type="number" 
+                step="0.1" 
+                className="form-control" 
+                placeholder={prefs.temp === 'C' ? '37.0' : '98.6'} 
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+              />
             </div>
           )}
           {healthType === 'medication' && (
             <>
               <div className="form-group">
                 <label className="form-label">Medication Name</label>
-                <input type="text" className="form-control" placeholder="e.g. Tylenol" />
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  placeholder="e.g. Tylenol" 
+                  value={medName}
+                  onChange={(e) => setMedName(e.target.value)}
+                />
               </div>
               <div className="form-group">
                 <label className="form-label">Dosage</label>
-                <input type="text" className="form-control" placeholder="e.g. 1.5ml" />
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  placeholder="e.g. 1.5ml" 
+                  value={dosage}
+                  onChange={(e) => setDosage(e.target.value)}
+                />
               </div>
             </>
           )}
@@ -71,7 +108,14 @@ export const HealthScreen = () => {
             <>
               <div className="form-group">
                 <label className="form-label">Weight ({prefs.weight})</label>
-                <input type="number" step="0.01" className="form-control" placeholder={prefs.weight === 'kg' ? '3.4' : '7.5'} />
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  className="form-control" 
+                  placeholder={prefs.weight === 'kg' ? '3.4' : '7.5'} 
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                />
               </div>
               <div className="form-group">
                 <label className="form-label">Height (cm)</label>
@@ -82,12 +126,17 @@ export const HealthScreen = () => {
           {healthType === 'symptom' && (
             <div className="form-group">
               <label className="form-label">Symptom / Note</label>
-              <textarea className="form-control" placeholder="Describe the symptom..."></textarea>
+              <textarea 
+                className="form-control" 
+                placeholder="Describe the symptom..."
+                value={symptom}
+                onChange={(e) => setSymptom(e.target.value)}
+              ></textarea>
             </div>
           )}
         </div>
 
-        <button className="btn btn-success btn-block" style={{ marginTop: '1rem', height: 56 }}>
+        <button className="btn btn-success btn-block" style={{ marginTop: '1rem', height: 56 }} onClick={handleSave}>
           <Check size={20} />
           <span>Save Entry</span>
         </button>
@@ -95,7 +144,7 @@ export const HealthScreen = () => {
 
       {/* Appointment Entry Placeholder */}
       <section style={{ marginTop: '1.5rem' }}>
-        <div className="card" style={{ borderStyle: 'dashed', background: 'var(--bg-card)' }} onClick={() => navigate('/doctor')}>
+        <div className="card" style={{ borderStyle: 'dashed', background: 'var(--bg-card)', cursor: 'pointer' }} onClick={() => navigate('/doctor')}>
           <div className="flex-row">
             <div className="btn btn-secondary btn-icon" style={{ width: 40, height: 40 }}>
               <Calendar size={20} className="text-primary" />
@@ -109,7 +158,7 @@ export const HealthScreen = () => {
       </section>
 
       <section style={{ marginTop: '1.5rem' }}>
-        <div className="flex-row space-between" onClick={() => navigate('/timeline')}>
+        <div className="flex-row space-between" onClick={() => navigate('/timeline')} style={{ cursor: 'pointer' }}>
           <h4>Recent Health Events</h4>
           <span className="text-sm text-primary">View Timeline</span>
         </div>

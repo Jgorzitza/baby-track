@@ -2,11 +2,38 @@ import { useNavigate } from 'react-router-dom';
 import { Play, Droplets, Baby, Thermometer, Pill, Stethoscope, Moon } from 'lucide-react';
 import { useFeedingTimer } from '../../features/feed/useFeedingTimer';
 import { useSleepTimer } from '../../features/sleep/useSleepTimer';
+import { useState, useEffect } from 'react';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 export const HomeScreen = () => {
   const navigate = useNavigate();
   const { activeSide, formatTime: formatFeedTime, totalSeconds: feedSeconds } = useFeedingTimer();
   const { isAsleep, formatElapsed: formatSleepTime, elapsed: sleepSeconds } = useSleepTimer();
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Simulate initial load for skeleton demonstration
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="home-screen">
+        <Skeleton height={80} className="card" />
+        <section>
+          <Skeleton width="40%" height="1.25rem" style={{ marginBottom: '1rem' }} />
+          <div className="grid-2">
+            {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} height={64} />)}
+          </div>
+        </section>
+        <section style={{ marginTop: '1.5rem' }}>
+          <Skeleton width="50%" height="1.25rem" style={{ marginBottom: '1rem' }} />
+          <Skeleton height={64} />
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="home-screen">
@@ -16,7 +43,7 @@ export const HomeScreen = () => {
             <h3>Leo</h3>
             <p className="text-muted text-sm">2 weeks, 3 days old</p>
           </div>
-          <div className="btn btn-secondary btn-icon">
+          <div className="btn btn-secondary btn-icon" onClick={() => navigate('/baby')}>
             <Baby size={24} />
           </div>
         </div>
@@ -112,7 +139,7 @@ export const HomeScreen = () => {
       <div style={{ marginTop: '1rem' }}>
         <button className="btn btn-primary btn-block" onClick={() => navigate('/doctor')}>
           <Stethoscope size={20} />
-          <span>Doctor Appointment Mode</span>
+          <span>Doctor Mode</span>
         </button>
       </div>
     </div>

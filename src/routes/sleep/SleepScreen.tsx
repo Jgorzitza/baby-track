@@ -1,8 +1,24 @@
 import { Play, Square, History, ChevronRight } from 'lucide-react';
 import { useSleepTimer } from '../../features/sleep/useSleepTimer';
+import { useNavigate } from 'react-router-dom';
+import { mockStore } from '../../lib/mockStore';
 
 export const SleepScreen = () => {
+  const navigate = useNavigate();
   const { isAsleep, startTime, elapsed, toggleSleep, formatElapsed } = useSleepTimer();
+
+  const handleToggle = () => {
+    if (isAsleep && startTime) {
+      // Ending a session - save to historical log
+      mockStore.addSleep({
+        type: 'sleep',
+        startTime: startTime.toISOString(),
+        endTime: new Date().toISOString(),
+        duration: elapsed
+      });
+    }
+    toggleSleep();
+  };
 
   return (
     <div className="sleep-screen">
@@ -10,7 +26,7 @@ export const SleepScreen = () => {
         <div 
           className={`btn btn-icon ${isAsleep ? 'btn-primary' : 'btn-secondary'}`}
           style={{ width: 120, height: 120, margin: '0 auto 1.5rem auto' }}
-          onClick={toggleSleep}
+          onClick={handleToggle}
         >
           {isAsleep ? <Square size={48} /> : <Play size={48} />}
         </div>
@@ -26,14 +42,14 @@ export const SleepScreen = () => {
         )}
         
         {!isAsleep && (
-          <button className="btn btn-primary btn-block" style={{ marginTop: '1rem' }} onClick={toggleSleep}>
+          <button className="btn btn-primary btn-block" style={{ marginTop: '1rem' }} onClick={handleToggle}>
             Start Sleep Session
           </button>
         )}
       </div>
 
       <section style={{ marginTop: '1.5rem' }}>
-        <div className="flex-row space-between">
+        <div className="flex-row space-between" onClick={() => navigate('/timeline')} style={{ cursor: 'pointer' }}>
           <h4>Last Sleep</h4>
           <span className="text-sm text-primary">View History</span>
         </div>

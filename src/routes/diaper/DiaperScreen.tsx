@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, History, ChevronRight, Droplets, PenLine, Pipette } from 'lucide-react';
 import { DiaperType, StoolConsistency } from '../../lib/types';
+import { mockStore } from '../../lib/mockStore';
 
 export const DiaperScreen = () => {
   const navigate = useNavigate();
   const [diaperType, setDiaperType] = useState<DiaperType>('wet');
   const [stoolConsistency, setStoolConsistency] = useState<StoolConsistency | ''>('');
   const [stoolColor, setStoolColor] = useState('');
+  const [urineNote, setUrineNote] = useState('');
   const [details, setDetails] = useState({
     mucus: false,
     blood: false
@@ -20,6 +22,20 @@ export const DiaperScreen = () => {
     { label: 'Mucus', value: 'mucus' },
     { label: 'Bloody', value: 'bloody' },
   ];
+
+  const handleSave = () => {
+    mockStore.addDiaper({
+      type: 'diaper',
+      diaperType,
+      stoolColor: stoolColor || undefined,
+      stoolConsistency: stoolConsistency || undefined,
+      urineColor: urineNote || undefined,
+      notes: (details.mucus || details.blood) 
+        ? `Details: ${details.mucus ? 'Mucus' : ''}${details.mucus && details.blood ? ', ' : ''}${details.blood ? 'Blood' : ''}`
+        : undefined
+    });
+    navigate('/');
+  };
 
   return (
     <div className="diaper-screen">
@@ -57,7 +73,13 @@ export const DiaperScreen = () => {
               <label className="form-label">Urine Note</label>
               <div className="flex-row">
                 <Pipette size={18} className="text-muted" />
-                <input type="text" className="form-control" placeholder="e.g. Concentrated, pale..." />
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  placeholder="e.g. Concentrated, pale..." 
+                  value={urineNote}
+                  onChange={(e) => setUrineNote(e.target.value)}
+                />
               </div>
             </div>
           )}
@@ -118,14 +140,14 @@ export const DiaperScreen = () => {
           )}
         </section>
 
-        <button className="btn btn-success btn-block" style={{ marginTop: '1.5rem', height: 56 }}>
+        <button className="btn btn-success btn-block" style={{ marginTop: '1.5rem', height: 56 }} onClick={handleSave}>
           <Check size={20} />
           <span>Save Diaper</span>
         </button>
       </div>
 
       <section style={{ marginTop: '1.5rem' }}>
-        <div className="flex-row space-between" onClick={() => navigate('/timeline')}>
+        <div className="flex-row space-between" onClick={() => navigate('/timeline')} style={{ cursor: 'pointer' }}>
           <h4>Today's Count</h4>
           <span className="text-sm text-primary">View History</span>
         </div>

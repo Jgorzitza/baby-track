@@ -1,14 +1,43 @@
 import { BarChart2, Calendar, ChevronRight, Droplets, Moon, Baby, Heart, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 export const ReportsScreen = () => {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 600);
+    return () => clearTimeout(timer);
+  }, []);
+
   const timelineItems = [
     { id: 't1', date: 'Today, Apr 2', event: 'Fever 38.2°C', time: '7:00 AM', color: 'var(--danger)' },
     { id: 't2', date: 'Yesterday, Apr 1', event: 'Mustard Diaper (Soft)', time: '9:15 AM', color: 'var(--success)' },
     { id: 't3', date: 'Mar 30', event: '2-Week Checkup (Planned)', time: '10:00 AM', color: 'var(--primary)' },
     { id: 't4', date: 'Mar 28', event: 'Longest Sleep: 5h', time: '1:00 AM', color: '#8b5cf6' },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="reports-screen">
+        <Skeleton height={80} className="card" />
+        <section>
+          <Skeleton width="40%" height="1.25rem" style={{ marginBottom: '1rem' }} />
+          <div className="flex-col" style={{ gap: '0.75rem' }}>
+            <Skeleton height={64} className="card" style={{ marginBottom: 0 }} />
+            <Skeleton height={64} className="card" style={{ marginBottom: 0 }} />
+            <Skeleton height={64} className="card" style={{ marginBottom: 0 }} />
+          </div>
+        </section>
+        <section style={{ marginTop: '1.5rem' }}>
+          <Skeleton width="50%" height="1.25rem" style={{ marginBottom: '1rem' }} />
+          <Skeleton height={160} className="card" />
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="reports-screen">
