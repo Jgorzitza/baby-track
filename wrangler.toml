@@ -1,0 +1,10 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "bbtrack"
+compatibility_date = "2026-04-08"
+pages_build_output_dir = "dist"
+
+[vars]
+VITE_ENV_MODE = "production"
+
+[build]
+command = "npm run build"
