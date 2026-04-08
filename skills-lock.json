@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "react-19": {
+      "source": "prowler-cloud/prowler",
+      "sourceType": "github",
+      "computedHash": "83f14c6635583cca94c1cb67c38e6c8fbd8920680bd9859e64c4da91b39b15a7"
+    }
+  }
+}
