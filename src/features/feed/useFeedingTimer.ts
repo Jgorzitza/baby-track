@@ -17,51 +17,61 @@ interface SavedFeedState {
 
 const getInitialState = (): SavedFeedState => {
   const saved = localStorage.getItem(STORAGE_KEY);
+  const defaultState: SavedFeedState = { 
+    activeSide: null, 
+    leftSeconds: 0, 
+    rightSeconds: 0, 
+    lastUpdated: 0, 
+    history: [] 
+  };
+
   if (saved) {
     try {
-      const state: SavedFeedState = JSON.parse(saved);
+      const state = JSON.parse(saved);
       const now = Date.now();
-      const diff = Math.floor((now - state.lastUpdated) / 1000);
+      const diff = Math.floor((now - (state.lastUpdated || now)) / 1000);
       
-      if (state.activeSide === 'left') {
-        return { ...state, leftSeconds: state.leftSeconds + diff };
-      } else if (state.activeSide === 'right') {
-        return { ...state, rightSeconds: state.rightSeconds + diff };
+      // Merge with defaultState to handle missing fields (schema evolution)
+      const merged: SavedFeedState = {
+        ...defaultState,
+        ...state,
+        history: Array.isArray(state.history) ? state.history : []
+      };
+
+      if (merged.activeSide === 'left') {
+        merged.leftSeconds += diff;
+      } else if (merged.activeSide === 'right') {
+        merged.rightSeconds += diff;
       }
-      return state;
+      return merged;
     } catch {
-      // Fallback if JSON is corrupt
+      return defaultState;
     }
   }
-  return { activeSide: null, leftSeconds: 0, rightSeconds: 0, lastUpdated: 0, history: [] };
+  return defaultState;
 };
 
 export const useFeedingTimer = () => {
-  const initialState = getInitialState();
-  const [activeSide, setActiveSide] = useState<'left' | 'right' | null>(initialState.activeSide);
-  const [leftSeconds, setLeftSeconds] = useState(initialState.leftSeconds);
-  const [rightSeconds, setRightSeconds] = useState(initialState.rightSeconds);
-  const [history, setHistory] = useState(initialState.history);
+  // Use a lazy initializer for useState to avoid repeated getInitialState calls
+  const [timerState, setTimerState] = useState<SavedFeedState>(getInitialState);
   
+  const { activeSide, leftSeconds, rightSeconds, history } = timerState;
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Save to localStorage whenever state changes
   useEffect(() => {
-    const state: SavedFeedState = {
-      activeSide,
-      leftSeconds,
-      rightSeconds,
-      lastUpdated: Date.now(),
-      history,
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [activeSide, leftSeconds, rightSeconds, history]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(timerState));
+  }, [timerState]);
 
   useEffect(() => {
     if (activeSide) {
       timerRef.current = setInterval(() => {
-        if (activeSide === 'left') setLeftSeconds(s => s + 1);
-        if (activeSide === 'right') setRightSeconds(s => s + 1);
+        setTimerState(prev => ({
+          ...prev,
+          lastUpdated: Date.now(),
+          leftSeconds: prev.activeSide === 'left' ? prev.leftSeconds + 1 : prev.leftSeconds,
+          rightSeconds: prev.activeSide === 'right' ? prev.rightSeconds + 1 : prev.rightSeconds,
+        }));
       }, 1000);
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -73,30 +83,46 @@ export const useFeedingTimer = () => {
   }, [activeSide]);
 
   const toggleSide = (side: 'left' | 'right') => {
-    // Save current state to history before changing
-    setHistory(prev => [...prev, { side: activeSide, timestamp: Date.now(), leftSeconds, rightSeconds }].slice(-10));
-    
-    if (activeSide === side) {
-      setActiveSide(null);
-    } else {
-      setActiveSide(side);
-    }
+    setTimerState(prev => {
+      const newActiveSide = prev.activeSide === side ? null : side;
+      return {
+        ...prev,
+        activeSide: newActiveSide,
+        lastUpdated: Date.now(),
+        history: [...prev.history, { 
+          side: prev.activeSide, 
+          timestamp: Date.now(), 
+          leftSeconds: prev.leftSeconds, 
+          rightSeconds: prev.rightSeconds 
+        }].slice(-10)
+      };
+    });
   };
 
   const undo = () => {
-    if (history.length === 0) return;
-    const last = history[history.length - 1];
-    setHistory(prev => prev.slice(0, -1));
-    setActiveSide(last.side);
-    setLeftSeconds(last.leftSeconds);
-    setRightSeconds(last.rightSeconds);
+    setTimerState(prev => {
+      if (prev.history.length === 0) return prev;
+      const last = prev.history[prev.history.length - 1];
+      return {
+        ...prev,
+        activeSide: last.side,
+        leftSeconds: last.leftSeconds,
+        rightSeconds: last.rightSeconds,
+        lastUpdated: Date.now(),
+        history: prev.history.slice(0, -1)
+      };
+    });
   };
 
   const reset = () => {
-    setActiveSide(null);
-    setLeftSeconds(0);
-    setRightSeconds(0);
-    setHistory([]);
+    const defaultState: SavedFeedState = { 
+      activeSide: null, 
+      leftSeconds: 0, 
+      rightSeconds: 0, 
+      lastUpdated: 0, 
+      history: [] 
+    };
+    setTimerState(defaultState);
     localStorage.removeItem(STORAGE_KEY);
   };
 
