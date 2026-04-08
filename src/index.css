@@ -272,6 +272,7 @@ textarea.form-control {
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
 .flex-row { display: flex; align-items: center; gap: 0.75rem; }
+.flex-col { display: flex; flex-direction: column; gap: 0.5rem; }
 .space-between { justify-content: space-between; }
 .text-muted { color: var(--text-muted); }
 .text-sm { font-size: 0.875rem; }

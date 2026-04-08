@@ -76,13 +76,18 @@ export const FeedScreen = () => {
                   height: 140, 
                   borderRadius: '50%',
                   padding: '1rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   boxShadow: activeSide === 'left' ? '0 8px 24px rgba(135, 206, 235, 0.4)' : 'none',
                   border: activeSide === 'left' ? 'none' : '2px solid var(--border)'
                 }}
                 onClick={() => toggleSide('left')}
               >
-                <span className="text-xs" style={{ marginBottom: '4px' }}>LEFT</span>
+                <span className="text-xs font-bold" style={{ letterSpacing: '0.05em', opacity: 0.8 }}>LEFT</span>
                 <span style={{ fontSize: '1.75rem', fontWeight: 800 }}>{formatTime(leftSeconds)}</span>
               </button>
               
@@ -93,13 +98,18 @@ export const FeedScreen = () => {
                   height: 140, 
                   borderRadius: '50%',
                   padding: '1rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   boxShadow: activeSide === 'right' ? '0 8px 24px rgba(135, 206, 235, 0.4)' : 'none',
                   border: activeSide === 'right' ? 'none' : '2px solid var(--border)'
                 }}
                 onClick={() => toggleSide('right')}
               >
-                <span className="text-xs" style={{ marginBottom: '4px' }}>RIGHT</span>
+                <span className="text-xs font-bold" style={{ letterSpacing: '0.05em', opacity: 0.8 }}>RIGHT</span>
                 <span style={{ fontSize: '1.75rem', fontWeight: 800 }}>{formatTime(rightSeconds)}</span>
               </button>
             </div>
