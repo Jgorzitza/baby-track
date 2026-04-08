@@ -33,11 +33,11 @@ export const HomeScreen = () => {
             <Baby size={20} />
             <span>Wet Diaper</span>
           </button>
-          <button className={`btn btn-secondary flex-col ${activeSide ? 'active-session-indicator' : ''}`} onClick={() => navigate('/feed')}>
+          <button className={`btn btn-secondary flex-col ${activeSide ? 'active-session-indicator' : ''}`} onClick={() => navigate('/feed', { state: { defaultType: 'breast' } })}>
             <Droplets size={20} />
             <span>{activeSide ? 'Feed Active' : 'Feed Breast'}</span>
           </button>
-          <button className="btn btn-secondary flex-col" onClick={() => navigate('/feed')}>
+          <button className="btn btn-secondary flex-col" onClick={() => navigate('/feed', { state: { defaultType: 'bottle' } })}>
             <Droplets size={20} />
             <span>Feed Bottle</span>
           </button>

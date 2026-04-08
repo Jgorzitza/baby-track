@@ -1,13 +1,17 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useFeedingTimer } from '../../features/feed/useFeedingTimer';
 import { Droplets, RotateCcw, Check, ChevronRight } from 'lucide-react';
 import { FeedOutcome } from '../../lib/types';
 import { useUnitPrefs } from '../../lib/useUnitPrefs';
 
 export const FeedScreen = () => {
+  const location = useLocation();
   const { activeSide, leftSeconds, rightSeconds, toggleSide, reset, formatTime, totalSeconds } = useFeedingTimer();
   const [outcome, setOutcome] = useState<FeedOutcome | ''>('');
-  const [feedType, setFeedType] = useState<'breast' | 'bottle'>('breast');
+  const [feedType, setFeedType] = useState<'breast' | 'bottle'>(() => {
+    return (location.state as { defaultType?: 'breast' | 'bottle' })?.defaultType || 'breast';
+  });
   const { prefs } = useUnitPrefs();
 
   const outcomes: { label: string; value: FeedOutcome }[] = [
