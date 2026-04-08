@@ -46,18 +46,20 @@ export const HealthScreen = () => {
           </button>
         </div>
 
-        <div className="form-group">
+        <div style={{ marginTop: '1.5rem' }}>
           {healthType === 'temperature' && (
-            <>
+            <div className="form-group">
               <label className="form-label">Temperature (°{prefs.temp})</label>
               <input type="number" step="0.1" className="form-control" placeholder={prefs.temp === 'C' ? '37.0' : '98.6'} />
-            </>
+            </div>
           )}
           {healthType === 'medication' && (
             <>
-              <label className="form-label">Medication Name</label>
-              <input type="text" className="form-control" placeholder="e.g. Tylenol" />
-              <div style={{ marginTop: '0.5rem' }}>
+              <div className="form-group">
+                <label className="form-label">Medication Name</label>
+                <input type="text" className="form-control" placeholder="e.g. Tylenol" />
+              </div>
+              <div className="form-group">
                 <label className="form-label">Dosage</label>
                 <input type="text" className="form-control" placeholder="e.g. 1.5ml" />
               </div>
@@ -65,19 +67,21 @@ export const HealthScreen = () => {
           )}
           {healthType === 'growth' && (
             <>
-              <label className="form-label">Weight ({prefs.weight})</label>
-              <input type="number" step="0.01" className="form-control" placeholder={prefs.weight === 'kg' ? '3.4' : '7.5'} />
-              <div style={{ marginTop: '0.5rem' }}>
+              <div className="form-group">
+                <label className="form-label">Weight ({prefs.weight})</label>
+                <input type="number" step="0.01" className="form-control" placeholder={prefs.weight === 'kg' ? '3.4' : '7.5'} />
+              </div>
+              <div className="form-group">
                 <label className="form-label">Height (cm)</label>
                 <input type="number" step="0.1" className="form-control" placeholder="51.0" />
               </div>
             </>
           )}
           {healthType === 'symptom' && (
-            <>
+            <div className="form-group">
               <label className="form-label">Symptom / Note</label>
-              <textarea className="form-control" rows={3} placeholder="Describe the symptom..."></textarea>
-            </>
+              <textarea className="form-control" placeholder="Describe the symptom..."></textarea>
+            </div>
           )}
         </div>
 

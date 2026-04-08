@@ -207,7 +207,7 @@ h4 {
 }
 .form-label {
   display: block;
-  margin-bottom: 0.5rem; /* Increased spacing between label and input */
+  margin-bottom: 0.875rem; /* Increased spacing */
   font-weight: 600;
   color: var(--text-muted);
   font-size: 0.875rem;
@@ -223,6 +223,11 @@ h4 {
   background-color: var(--bg);
   color: var(--text);
   transition: border-color 0.2s;
+  vertical-align: top; /* Ensure alignment with top-aligned labels */
+}
+textarea.form-control {
+  min-height: 100px;
+  resize: none;
 }
 .form-control:focus {
   outline: none;
