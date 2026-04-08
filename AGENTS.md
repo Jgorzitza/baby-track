@@ -3,7 +3,7 @@
 This document is foundational and takes precedence over general workflows. All coding agents must follow these rules strictly.
 
 ## Mandates
-
+Execute at a high level
 ### Phased Execution
 1. **Foundation**: Repo setup, docs, guardrails (Current Phase).
 2. **UI/UX Design**: App Shell, layout, navigation, core screens (Mocks only).
