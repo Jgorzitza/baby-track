@@ -1,1 +1,3 @@
-/* /index.html 200
+# SPA routing fix: point to / instead of /index.html to avoid .html stripping loops
+/assets/*  /assets/:splat  200
+/*         /               200
