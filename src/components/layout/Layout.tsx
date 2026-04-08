@@ -4,7 +4,6 @@ import { BottomNav } from './BottomNav';
 export const Layout = () => {
   const location = useLocation();
   
-  // Map routes to titles
   const getTitle = (pathname: string) => {
     switch (pathname) {
       case '/': return 'bbtrack';
@@ -14,7 +13,7 @@ export const Layout = () => {
       case '/health': return 'Health';
       case '/reports': return 'Reports';
       case '/settings': return 'Settings';
-      case '/doctor': return 'Doctor Appointment';
+      case '/doctor': return 'Doctor Mode';
       default: return 'bbtrack';
     }
   };
@@ -22,7 +21,11 @@ export const Layout = () => {
   return (
     <>
       <header className="top-bar">
-        {getTitle(location.pathname)}
+        <div className="sync-status">
+          <div className="sync-indicator"></div>
+          <span>Offline Ready</span>
+        </div>
+        <div>{getTitle(location.pathname)}</div>
       </header>
       <main>
         <Outlet />

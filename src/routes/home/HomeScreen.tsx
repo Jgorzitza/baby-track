@@ -1,8 +1,12 @@
 import { useNavigate } from 'react-router-dom';
-import { Play, Droplets, Baby, Thermometer, Pill, Stethoscope } from 'lucide-react';
+import { Play, Droplets, Baby, Thermometer, Pill, Stethoscope, Moon } from 'lucide-react';
+import { useFeedingTimer } from '../../features/feed/useFeedingTimer';
+import { useSleepTimer } from '../../features/sleep/useSleepTimer';
 
 export const HomeScreen = () => {
   const navigate = useNavigate();
+  const { activeSide, formatTime: formatFeedTime, totalSeconds: feedSeconds } = useFeedingTimer();
+  const { isAsleep, formatElapsed: formatSleepTime, elapsed: sleepSeconds } = useSleepTimer();
 
   return (
     <div className="home-screen">
@@ -21,17 +25,17 @@ export const HomeScreen = () => {
       <section>
         <h4>Quick Actions</h4>
         <div className="grid-2">
-          <button className="btn btn-secondary flex-col" onClick={() => navigate('/sleep')}>
+          <button className={`btn btn-secondary flex-col ${isAsleep ? 'active-session-indicator' : ''}`} onClick={() => navigate('/sleep')}>
             <Play size={20} />
-            <span>Start Sleep</span>
+            <span>{isAsleep ? 'Sleep Active' : 'Start Sleep'}</span>
           </button>
           <button className="btn btn-secondary flex-col" onClick={() => navigate('/diaper')}>
             <Baby size={20} />
             <span>Wet Diaper</span>
           </button>
-          <button className="btn btn-secondary flex-col" onClick={() => navigate('/feed')}>
+          <button className={`btn btn-secondary flex-col ${activeSide ? 'active-session-indicator' : ''}`} onClick={() => navigate('/feed')}>
             <Droplets size={20} />
-            <span>Feed Breast</span>
+            <span>{activeSide ? 'Feed Active' : 'Feed Breast'}</span>
           </button>
           <button className="btn btn-secondary flex-col" onClick={() => navigate('/feed')}>
             <Droplets size={20} />
@@ -53,14 +57,37 @@ export const HomeScreen = () => {
           <h4>Active Sessions</h4>
           <span className="text-sm text-primary">View All</span>
         </div>
-        <div className="card" style={{ borderLeft: '4px solid var(--primary)', marginBottom: '0.5rem' }} onClick={() => navigate('/feed')}>
-          <div className="flex-row space-between">
-            <div className="flex-row">
-              <Droplets size={18} className="text-primary" />
-              <span>Feeding (Left)</span>
+        
+        <div className="flex-col" style={{ gap: '0.75rem' }}>
+          {activeSide && (
+            <div className="card active-session-indicator" style={{ borderLeft: '4px solid var(--primary)', marginBottom: 0 }} onClick={() => navigate('/feed')}>
+              <div className="flex-row space-between">
+                <div className="flex-row">
+                  <Droplets size={18} className="text-primary" />
+                  <span>Feeding ({activeSide.toUpperCase()})</span>
+                </div>
+                <span className="text-primary font-bold">{formatFeedTime(feedSeconds)}</span>
+              </div>
             </div>
-            <span className="text-primary font-bold">12:45</span>
-          </div>
+          )}
+
+          {isAsleep && (
+            <div className="card active-session-indicator" style={{ borderLeft: '4px solid var(--primary-dark)', marginBottom: 0 }} onClick={() => navigate('/sleep')}>
+              <div className="flex-row space-between">
+                <div className="flex-row">
+                  <Moon size={18} className="text-primary-dark" />
+                  <span>Sleep Session</span>
+                </div>
+                <span className="text-primary-dark font-bold">{formatSleepTime(sleepSeconds)}</span>
+              </div>
+            </div>
+          )}
+
+          {!activeSide && !isAsleep && (
+            <div className="card text-center" style={{ padding: '1rem' }}>
+              <p className="text-muted text-sm" style={{ margin: 0 }}>No active timers</p>
+            </div>
+          )}
         </div>
       </section>
 
