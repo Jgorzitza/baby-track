@@ -23,7 +23,7 @@ export const FeedScreen = () => {
   return (
     <div className="feed-screen">
       <div className="card">
-        <div className="flex-row space-between" style={{ marginBottom: '1rem' }}>
+        <div className="flex-row space-between" style={{ marginBottom: '1.5rem' }}>
           <div className="grid-2" style={{ flex: 1 }}>
             <button 
               className={`btn ${feedType === 'breast' ? 'btn-primary' : 'btn-secondary'}`}
@@ -42,31 +42,48 @@ export const FeedScreen = () => {
 
         {feedType === 'breast' ? (
           <>
-            <div className="grid-2" style={{ margin: '1.5rem 0' }}>
+            <div className="flex-row" style={{ justifyContent: 'space-around', margin: '2rem 0' }}>
               <button 
                 className={`btn flex-col ${activeSide === 'left' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ height: 120 }}
+                style={{ 
+                  width: 140, 
+                  height: 140, 
+                  borderRadius: '50%',
+                  padding: 0,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: activeSide === 'left' ? '0 8px 24px rgba(135, 206, 235, 0.4)' : 'none',
+                  border: activeSide === 'left' ? 'none' : '2px solid var(--border)'
+                }}
                 onClick={() => toggleSide('left')}
               >
-                <span className="text-sm">Left Side</span>
-                <span style={{ fontSize: '2rem', fontWeight: 700 }}>{formatTime(leftSeconds)}</span>
+                <span className="text-xs" style={{ marginBottom: '4px' }}>LEFT</span>
+                <span style={{ fontSize: '1.75rem', fontWeight: 800 }}>{formatTime(leftSeconds)}</span>
               </button>
+              
               <button 
                 className={`btn flex-col ${activeSide === 'right' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ height: 120 }}
+                style={{ 
+                  width: 140, 
+                  height: 140, 
+                  borderRadius: '50%',
+                  padding: 0,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: activeSide === 'right' ? '0 8px 24px rgba(135, 206, 235, 0.4)' : 'none',
+                  border: activeSide === 'right' ? 'none' : '2px solid var(--border)'
+                }}
                 onClick={() => toggleSide('right')}
               >
-                <span className="text-sm">Right Side</span>
-                <span style={{ fontSize: '2rem', fontWeight: 700 }}>{formatTime(rightSeconds)}</span>
+                <span className="text-xs" style={{ marginBottom: '4px' }}>RIGHT</span>
+                <span style={{ fontSize: '1.75rem', fontWeight: 800 }}>{formatTime(rightSeconds)}</span>
               </button>
             </div>
 
-            <div className="flex-row space-between card" style={{ padding: '0.75rem' }}>
-              <div className="flex-row text-muted">
-                <RotateCcw size={18} onClick={reset} style={{ cursor: 'pointer' }} />
-                <span>Reset</span>
+            <div className="flex-row space-between card" style={{ padding: '0.75rem', background: 'var(--bg)', borderRadius: '1rem' }}>
+              <div className="flex-row text-muted" onClick={reset} style={{ cursor: 'pointer' }}>
+                <RotateCcw size={18} />
+                <span className="text-sm font-bold">Reset</span>
               </div>
-              <div className="font-bold">
+              <div className="font-bold text-primary-dark">
                 Total: {formatTime(totalSeconds)}
               </div>
             </div>
@@ -83,14 +100,24 @@ export const FeedScreen = () => {
           </div>
         )}
 
-        <section style={{ marginTop: '1.5rem' }}>
+        <section style={{ marginTop: '2rem' }}>
           <h4>Feed Outcome</h4>
-          <div className="flex-row" style={{ overflowX: 'auto', paddingBottom: '0.5rem' }}>
+          <div className="flex-row" style={{ 
+            flexWrap: 'wrap',
+            gap: '0.5rem',
+            marginTop: '0.5rem'
+          }}>
             {outcomes.map(o => (
               <button 
                 key={o.value}
-                className={`btn text-sm ${outcome === o.value ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ whiteSpace: 'nowrap', minWidth: 'auto', height: 40 }}
+                className={`btn text-xs ${outcome === o.value ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ 
+                  height: 36, 
+                  padding: '0 0.75rem',
+                  borderRadius: '0.75rem',
+                  flex: '1 0 calc(33.33% - 0.5rem)',
+                  minWidth: '80px'
+                }}
                 onClick={() => setOutcome(o.value)}
               >
                 {o.label}
@@ -99,9 +126,9 @@ export const FeedScreen = () => {
           </div>
         </section>
 
-        <div style={{ marginTop: '1.5rem' }}>
-          <button className="btn btn-success btn-block" style={{ height: 56 }}>
-            <Check size={20} />
+        <div style={{ marginTop: '2rem' }}>
+          <button className="btn btn-success btn-block" style={{ height: 60, fontSize: '1.1rem' }}>
+            <Check size={24} />
             <span>Finish Session</span>
           </button>
         </div>
