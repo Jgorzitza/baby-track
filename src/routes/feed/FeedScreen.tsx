@@ -49,7 +49,7 @@ export const FeedScreen = () => {
                   width: 140, 
                   height: 140, 
                   borderRadius: '50%',
-                  padding: 0,
+                  padding: '1rem',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   boxShadow: activeSide === 'left' ? '0 8px 24px rgba(135, 206, 235, 0.4)' : 'none',
                   border: activeSide === 'left' ? 'none' : '2px solid var(--border)'
@@ -66,7 +66,7 @@ export const FeedScreen = () => {
                   width: 140, 
                   height: 140, 
                   borderRadius: '50%',
-                  padding: 0,
+                  padding: '1rem',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   boxShadow: activeSide === 'right' ? '0 8px 24px rgba(135, 206, 235, 0.4)' : 'none',
                   border: activeSide === 'right' ? 'none' : '2px solid var(--border)'
