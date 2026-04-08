@@ -1,6 +1,8 @@
-import { BarChart2, Calendar, ChevronRight, Droplets, Moon, Baby } from 'lucide-react';
+import { BarChart2, Calendar, ChevronRight, Droplets, Moon, Baby, Heart, Activity } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export const ReportsScreen = () => {
+  const navigate = useNavigate();
   const timelineItems = [
     { id: 't1', date: 'Today, Apr 2', event: 'Fever 38.2°C', time: '7:00 AM', color: 'var(--danger)' },
     { id: 't2', date: 'Yesterday, Apr 1', event: 'Mustard Diaper (Soft)', time: '9:15 AM', color: 'var(--success)' },
@@ -22,63 +24,86 @@ export const ReportsScreen = () => {
 
       <section>
         <h4>Activity Summaries</h4>
-        <div className="flex-col">
-          <div className="card">
+        <div className="flex-col" style={{ gap: '0.75rem' }}>
+          <div className="card" style={{ marginBottom: 0 }}>
             <div className="flex-row space-between">
               <div className="flex-row">
-                <div className="btn btn-secondary btn-icon" style={{ backgroundColor: '#eef2ff' }}>
-                  <Moon size={20} className="text-primary" />
+                <div className="btn btn-secondary btn-icon" style={{ backgroundColor: '#eef2ff', width: 40, height: 40 }}>
+                  <Moon size={18} className="text-primary" />
                 </div>
                 <div>
-                  <div className="font-bold">Sleep</div>
+                  <div className="font-bold text-sm">Sleep</div>
                   <div className="text-xs text-muted">14h 20m daily avg</div>
                 </div>
               </div>
-              <ChevronRight size={20} className="text-muted" />
+              <ChevronRight size={18} className="text-muted" />
             </div>
           </div>
 
-          <div className="card">
+          <div className="card" style={{ marginBottom: 0 }}>
             <div className="flex-row space-between">
               <div className="flex-row">
-                <div className="btn btn-secondary btn-icon" style={{ backgroundColor: '#fff1f2' }}>
-                  <Droplets size={20} className="text-danger" />
+                <div className="btn btn-secondary btn-icon" style={{ backgroundColor: '#fff1f2', width: 40, height: 40 }}>
+                  <Droplets size={18} className="text-danger" />
                 </div>
                 <div>
-                  <div className="font-bold">Feeding</div>
+                  <div className="font-bold text-sm">Feeding</div>
                   <div className="text-xs text-muted">8.5 sessions daily avg</div>
                 </div>
               </div>
-              <ChevronRight size={20} className="text-muted" />
+              <ChevronRight size={18} className="text-muted" />
             </div>
           </div>
 
-          <div className="card">
+          <div className="card" style={{ marginBottom: 0 }}>
             <div className="flex-row space-between">
               <div className="flex-row">
-                <div className="btn btn-secondary btn-icon" style={{ backgroundColor: '#f0fdf4' }}>
-                  <Baby size={20} className="text-success" />
+                <div className="btn btn-secondary btn-icon" style={{ backgroundColor: '#f0fdf4', width: 40, height: 40 }}>
+                  <Baby size={18} className="text-success" />
                 </div>
                 <div>
-                  <div className="font-bold">Diapers</div>
+                  <div className="font-bold text-sm">Diapers</div>
                   <div className="text-xs text-muted">6.2 daily avg</div>
                 </div>
               </div>
-              <ChevronRight size={20} className="text-muted" />
+              <ChevronRight size={18} className="text-muted" />
             </div>
           </div>
         </div>
       </section>
 
       <section style={{ marginTop: '1.5rem' }}>
-        <h4>Medical Timeline</h4>
+        <h4>Health & Symptoms</h4>
+        <div className="grid-2">
+          <div className="card" style={{ marginBottom: 0 }}>
+            <div className="flex-row text-xs text-muted" style={{ marginBottom: '4px' }}>
+              <Heart size={14} className="text-danger" /> <span>Medications</span>
+            </div>
+            <div className="font-bold">3 Doses</div>
+            <div className="text-xs text-muted">Tylenol (Last: 7:15 AM)</div>
+          </div>
+          <div className="card" style={{ marginBottom: 0 }}>
+            <div className="flex-row text-xs text-muted" style={{ marginBottom: '4px' }}>
+              <Activity size={14} className="text-warning" /> <span>Symptoms</span>
+            </div>
+            <div className="font-bold">2 Noted</div>
+            <div className="text-xs text-muted">Fussy, Poor appetite</div>
+          </div>
+        </div>
+      </section>
+
+      <section style={{ marginTop: '1.5rem' }}>
+        <div className="flex-row space-between" onClick={() => navigate('/timeline')}>
+          <h4>Medical Timeline</h4>
+          <span className="text-xs text-primary font-bold">View All</span>
+        </div>
         <div className="card" style={{ padding: '0' }}>
           {timelineItems.map((item, i, arr) => (
             <div key={item.id} className="flex-row" style={{ 
-              padding: '1.25rem', 
+              padding: '1rem', 
               borderBottom: i === arr.length - 1 ? 'none' : '1px solid var(--border)' 
             }}>
-              <div style={{ width: '4px', height: '40px', backgroundColor: item.color, borderRadius: '2px', marginRight: '1rem' }} />
+              <div style={{ width: '4px', height: '32px', backgroundColor: item.color, borderRadius: '2px', marginRight: '0.75rem' }} />
               <div style={{ flex: 1 }}>
                 <div className="flex-row space-between">
                   <span className="text-xs text-muted font-bold">{item.date}</span>
@@ -91,7 +116,7 @@ export const ReportsScreen = () => {
         </div>
       </section>
 
-      <div style={{ marginTop: '1rem' }}>
+      <div style={{ marginTop: '1.5rem' }}>
         <button className="btn btn-secondary btn-block">
           <BarChart2 size={20} />
           <span>Detailed Trends</span>

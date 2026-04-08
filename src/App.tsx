@@ -8,6 +8,10 @@ import { HealthScreen } from './routes/health/HealthScreen';
 import { ReportsScreen } from './routes/reports/ReportsScreen';
 import { SettingsScreen } from './routes/settings/SettingsScreen';
 import { DoctorScreen } from './routes/doctor/DoctorScreen';
+import { HouseholdScreen } from './routes/household/HouseholdScreen';
+import { BabyProfileScreen } from './routes/baby/BabyProfileScreen';
+import { DoctorQuestionsScreen } from './routes/doctor/DoctorQuestionsScreen';
+import { MedicalTimelineScreen } from './routes/medical-timeline/MedicalTimelineScreen';
 import { useState } from 'react';
 import { LogIn, Mail, Lock, Baby } from 'lucide-react';
 
@@ -68,6 +72,10 @@ function App() {
           <Route path="/reports" element={<ReportsScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
           <Route path="/doctor" element={<DoctorScreen />} />
+          <Route path="/doctor/questions" element={<DoctorQuestionsScreen />} />
+          <Route path="/household" element={<HouseholdScreen />} />
+          <Route path="/baby" element={<BabyProfileScreen />} />
+          <Route path="/timeline" element={<MedicalTimelineScreen />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

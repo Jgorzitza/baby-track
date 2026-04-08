@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Thermometer, Pill, Activity, LineChart, Check, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Thermometer, Pill, Activity, LineChart, Check, ChevronRight, Calendar } from 'lucide-react';
 import { HealthType } from '../../lib/types';
 import { useUnitPrefs } from '../../lib/useUnitPrefs';
 
 export const HealthScreen = () => {
+  const navigate = useNavigate();
   const [healthType, setHealthType] = useState<HealthType>('temperature');
   const { prefs } = useUnitPrefs();
 
@@ -91,8 +93,23 @@ export const HealthScreen = () => {
         </button>
       </div>
 
+      {/* Appointment Entry Placeholder */}
       <section style={{ marginTop: '1.5rem' }}>
-        <div className="flex-row space-between">
+        <div className="card" style={{ borderStyle: 'dashed', background: 'var(--bg-card)' }} onClick={() => navigate('/doctor')}>
+          <div className="flex-row">
+            <div className="btn btn-secondary btn-icon" style={{ width: 40, height: 40 }}>
+              <Calendar size={20} className="text-primary" />
+            </div>
+            <div>
+              <div className="text-sm font-bold">Plan Doctor Appointment</div>
+              <p className="text-xs text-muted" style={{ margin: 0 }}>Add questions and schedule visit</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section style={{ marginTop: '1.5rem' }}>
+        <div className="flex-row space-between" onClick={() => navigate('/timeline')}>
           <h4>Recent Health Events</h4>
           <span className="text-sm text-primary">View Timeline</span>
         </div>

@@ -1,11 +1,17 @@
 import { useState } from 'react';
-import { Check, History, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Check, History, ChevronRight, Droplets, PenLine, Pipette } from 'lucide-react';
 import { DiaperType, StoolConsistency } from '../../lib/types';
 
 export const DiaperScreen = () => {
+  const navigate = useNavigate();
   const [diaperType, setDiaperType] = useState<DiaperType>('wet');
   const [stoolConsistency, setStoolConsistency] = useState<StoolConsistency | ''>('');
   const [stoolColor, setStoolColor] = useState('');
+  const [details, setDetails] = useState({
+    mucus: false,
+    blood: false
+  });
 
   const consistencies: { label: string; value: StoolConsistency }[] = [
     { label: 'Soft', value: 'soft' },
@@ -25,6 +31,7 @@ export const DiaperScreen = () => {
             style={{ height: 80 }}
             onClick={() => setDiaperType('wet')}
           >
+            <Droplets size={20} />
             <span>Wet</span>
           </button>
           <button 
@@ -32,6 +39,7 @@ export const DiaperScreen = () => {
             style={{ height: 80 }}
             onClick={() => setDiaperType('dirty')}
           >
+            <PenLine size={20} />
             <span>Dirty</span>
           </button>
           <button 
@@ -43,40 +51,72 @@ export const DiaperScreen = () => {
           </button>
         </div>
 
-        {(diaperType === 'dirty' || diaperType === 'both') && (
-          <section style={{ marginTop: '1rem' }}>
+        <section style={{ marginTop: '1.5rem' }}>
+          {diaperType !== 'dirty' && (
             <div className="form-group">
-              <label className="form-label">Stool Consistency</label>
-              <div className="flex-row" style={{ overflowX: 'auto', paddingBottom: '0.5rem' }}>
-                {consistencies.map(c => (
-                  <button 
-                    key={c.value}
-                    className={`btn text-sm ${stoolConsistency === c.value ? 'btn-primary' : 'btn-secondary'}`}
-                    style={{ whiteSpace: 'nowrap', minWidth: 'auto', height: 40 }}
-                    onClick={() => setStoolConsistency(c.value)}
-                  >
-                    {c.label}
-                  </button>
-                ))}
+              <label className="form-label">Urine Note</label>
+              <div className="flex-row">
+                <Pipette size={18} className="text-muted" />
+                <input type="text" className="form-control" placeholder="e.g. Concentrated, pale..." />
               </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">Stool Color</label>
-              <div className="grid-3">
-                {['Yellow', 'Mustard', 'Brown', 'Green', 'Black'].map(color => (
+          )}
+
+          {(diaperType === 'dirty' || diaperType === 'both') && (
+            <>
+              <div className="form-group">
+                <label className="form-label">Stool Consistency</label>
+                <div className="flex-row" style={{ overflowX: 'auto', paddingBottom: '0.5rem', gap: '0.5rem' }}>
+                  {consistencies.map(c => (
+                    <button 
+                      key={c.value}
+                      className={`btn text-xs ${stoolConsistency === c.value ? 'btn-primary' : 'btn-secondary'}`}
+                      style={{ whiteSpace: 'nowrap', minWidth: 'auto', height: 36, padding: '0 0.75rem' }}
+                      onClick={() => setStoolConsistency(c.value)}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Stool Color</label>
+                <div className="grid-3">
+                  {['Yellow', 'Mustard', 'Brown', 'Green', 'Black'].map(color => (
+                    <button 
+                      key={color}
+                      className={`btn text-xs ${stoolColor === color ? 'btn-primary' : 'btn-secondary'}`}
+                      style={{ height: 36 }}
+                      onClick={() => setStoolColor(color)}
+                    >
+                      {color}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Special Details</label>
+                <div className="grid-2">
                   <button 
-                    key={color}
-                    className={`btn text-sm ${stoolColor === color ? 'btn-primary' : 'btn-secondary'}`}
+                    className={`btn text-xs ${details.mucus ? 'btn-danger' : 'btn-secondary'}`}
+                    onClick={() => setDetails(d => ({ ...d, mucus: !d.mucus }))}
                     style={{ height: 40 }}
-                    onClick={() => setStoolColor(color)}
                   >
-                    {color}
+                    Mucus
                   </button>
-                ))}
+                  <button 
+                    className={`btn text-xs ${details.blood ? 'btn-danger' : 'btn-secondary'}`}
+                    onClick={() => setDetails(d => ({ ...d, blood: !d.blood }))}
+                    style={{ height: 40 }}
+                  >
+                    Blood
+                  </button>
+                </div>
               </div>
-            </div>
-          </section>
-        )}
+            </>
+          )}
+        </section>
 
         <button className="btn btn-success btn-block" style={{ marginTop: '1.5rem', height: 56 }}>
           <Check size={20} />
@@ -85,7 +125,7 @@ export const DiaperScreen = () => {
       </div>
 
       <section style={{ marginTop: '1.5rem' }}>
-        <div className="flex-row space-between">
+        <div className="flex-row space-between" onClick={() => navigate('/timeline')}>
           <h4>Today's Count</h4>
           <span className="text-sm text-primary">View History</span>
         </div>

@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useFeedingTimer } from '../../features/feed/useFeedingTimer';
-import { Droplets, RotateCcw, Check, ChevronRight } from 'lucide-react';
+import { Droplets, RotateCcw, Check, ChevronRight, Undo2 } from 'lucide-react';
 import { FeedOutcome } from '../../lib/types';
 import { useUnitPrefs } from '../../lib/useUnitPrefs';
 
 export const FeedScreen = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { activeSide, leftSeconds, rightSeconds, toggleSide, reset, formatTime, totalSeconds } = useFeedingTimer();
   const [outcome, setOutcome] = useState<FeedOutcome | ''>('');
   const [feedType, setFeedType] = useState<'breast' | 'bottle'>(() => {
@@ -83,9 +84,15 @@ export const FeedScreen = () => {
             </div>
 
             <div className="flex-row space-between card" style={{ padding: '0.75rem', background: 'var(--bg)', borderRadius: '1rem' }}>
-              <div className="flex-row text-muted" onClick={reset} style={{ cursor: 'pointer' }}>
-                <RotateCcw size={18} />
-                <span className="text-sm font-bold">Reset</span>
+              <div className="flex-row" style={{ gap: '1rem' }}>
+                <div className="flex-row text-muted" onClick={reset} style={{ cursor: 'pointer' }}>
+                  <RotateCcw size={18} />
+                  <span className="text-sm font-bold">Reset</span>
+                </div>
+                <div className="flex-row text-muted" style={{ cursor: 'pointer' }}>
+                  <Undo2 size={18} />
+                  <span className="text-sm font-bold">Undo</span>
+                </div>
               </div>
               <div className="font-bold text-primary-dark">
                 Total: {formatTime(totalSeconds)}
@@ -139,7 +146,7 @@ export const FeedScreen = () => {
       </div>
 
       <section style={{ marginTop: '1.5rem' }}>
-        <div className="flex-row space-between">
+        <div className="flex-row space-between" onClick={() => navigate('/timeline')}>
           <h4>Recent History</h4>
           <ChevronRight size={20} className="text-muted" />
         </div>

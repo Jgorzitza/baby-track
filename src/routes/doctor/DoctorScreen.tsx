@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MapPin, HelpCircle, ChevronRight, Droplets, Moon, Baby, Heart, ChevronDown, ChevronUp, Clock, ClipboardList } from 'lucide-react';
+import { MapPin, HelpCircle, ChevronRight, Droplets, Moon, Baby, Heart, ChevronDown, ChevronUp, Clock, ClipboardList, AlertCircle } from 'lucide-react';
 import { mockAppointments, mockFeeds, mockHealth } from '../../lib/mockData';
 
 export const DoctorScreen = () => {
@@ -7,7 +7,7 @@ export const DoctorScreen = () => {
   const [timeWindow, setTimeWindow] = useState<'24h' | '48h' | '7d'>('48h');
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   
-  const appointment = mockAppointments[0];
+  const appointment = mockAppointments.length > 0 ? mockAppointments[0] : null;
 
   const toggleSection = (id: string) => {
     setExpandedSection(expandedSection === id ? null : id);
@@ -21,7 +21,7 @@ export const DoctorScreen = () => {
           onClick={() => setMode('appointment')}
           style={{ flex: 1, minHeight: 40 }}
         >
-          Appointment Mode
+          Doctor Mode
         </button>
         <button 
           className={`btn text-xs ${mode === 'planning' ? 'btn-primary' : 'btn-secondary'}`}
@@ -34,6 +34,15 @@ export const DoctorScreen = () => {
 
       {mode === 'appointment' ? (
         <div className="appointment-mode">
+          {!appointment && (
+            <div className="card" style={{ backgroundColor: 'var(--bg-card)', borderStyle: 'dashed' }}>
+              <div className="flex-row" style={{ color: 'var(--text-muted)' }}>
+                <AlertCircle size={20} />
+                <span className="text-sm">No scheduled appointment. Showing current summary.</span>
+              </div>
+            </div>
+          )}
+
           {/* Time Window Switcher */}
           <div className="flex-row" style={{ justifyContent: 'center', marginBottom: '1.5rem', gap: '0.5rem' }}>
             {['24h', '48h', '7d'].map((w) => (
@@ -57,9 +66,13 @@ export const DoctorScreen = () => {
               {expandedSection === 'questions' ? (
                 <>
                   <ul style={{ paddingLeft: '1.25rem', margin: 0 }}>
-                    {appointment.questions.map((q) => (
-                      <li key={q} className="text-sm" style={{ marginBottom: '0.75rem' }}>{q}</li>
-                    ))}
+                    {(appointment?.questions || []).length > 0 ? (
+                      appointment!.questions.map((q) => (
+                        <li key={q} className="text-sm" style={{ marginBottom: '0.75rem' }}>{q}</li>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted">No questions listed.</p>
+                    )}
                   </ul>
                   <div className="flex-row" style={{ marginTop: '1rem' }}>
                     <input type="text" className="form-control" style={{ minHeight: 40, fontSize: '0.875rem' }} placeholder="Quick add question..." />
@@ -67,7 +80,7 @@ export const DoctorScreen = () => {
                   </div>
                 </>
               ) : (
-                <div className="text-sm text-muted">{appointment.questions.length} questions ready for review.</div>
+                <div className="text-sm text-muted">{(appointment?.questions || []).length} questions ready for review.</div>
               )}
             </div>
           </section>
@@ -146,17 +159,17 @@ export const DoctorScreen = () => {
           <div className="card">
             <div className="form-group">
               <label className="form-label">Provider Name</label>
-              <input type="text" className="form-control" defaultValue={appointment.provider} />
+              <input type="text" className="form-control" defaultValue={appointment?.provider || ''} placeholder="e.g. Dr. Smith" />
             </div>
             <div className="form-group">
               <label className="form-label">Date & Time</label>
-              <input type="datetime-local" className="form-control" defaultValue={appointment.dateTime.slice(0, 16)} />
+              <input type="datetime-local" className="form-control" defaultValue={appointment?.dateTime.slice(0, 16) || ''} />
             </div>
             <div className="form-group">
               <label className="form-label">Location</label>
               <div className="flex-row">
                 <MapPin size={20} className="text-muted" />
-                <input type="text" className="form-control" defaultValue={appointment.location} />
+                <input type="text" className="form-control" defaultValue={appointment?.location || ''} placeholder="Medical Center" />
               </div>
             </div>
             <div className="form-group">
@@ -172,7 +185,7 @@ export const DoctorScreen = () => {
               <h4 style={{ margin: 0 }}>Questions for Doctor</h4>
             </div>
             <div style={{ marginTop: '1.25rem' }}>
-              {appointment.questions.map((q) => (
+              {(appointment?.questions || []).map((q) => (
                 <div key={q} className="flex-row space-between card" style={{ padding: '0.875rem', marginBottom: '0.75rem', background: 'var(--bg)' }}>
                   <span className="text-sm">{q}</span>
                 </div>
