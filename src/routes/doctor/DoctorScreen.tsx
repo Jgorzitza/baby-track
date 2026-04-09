@@ -17,7 +17,9 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useDoctorSummary } from '../../lib/app-hooks';
+import { TrendChart } from '../../components/charts/TrendChart';
 import { formatElapsedClock } from '../../lib/time';
+import { buildDoctorTrendSeries, metricFromTimelineEvent, type TrendMetric } from '../../lib/trends';
 
 export const DoctorScreen = () => {
   const navigate = useNavigate();
@@ -42,6 +44,9 @@ export const DoctorScreen = () => {
   const [questionDraft, setQuestionDraft] = useState('');
   const [planningMessage, setPlanningMessage] = useState<string | null>(null);
   const [visitMessage, setVisitMessage] = useState<string | null>(null);
+  const [selectedTrendMetric, setSelectedTrendMetric] = useState<TrendMetric>('feed');
+  const doctorTrendSeries = buildDoctorTrendSeries(doctorSummary);
+  const selectedDoctorTrend = doctorTrendSeries.find((series) => series.metric === selectedTrendMetric) ?? doctorTrendSeries[0] ?? null;
 
   const syncPlanningFields = () => {
     setProvider(doctorSummary.appointment?.provider ?? '');
@@ -283,15 +288,28 @@ export const DoctorScreen = () => {
               <h4>Live Timeline</h4>
               <Clock size={16} className="text-muted" />
             </div>
+            {selectedDoctorTrend && (
+              <div style={{ marginBottom: '0.75rem' }}>
+                <TrendChart series={selectedDoctorTrend} />
+              </div>
+            )}
             <div className="card" style={{ padding: '0.5rem' }}>
               {doctorSummary.timeline.slice(0, 5).map((entry, index, list) => (
-                <div
+                <button
                   key={entry.id}
+                  type="button"
                   className="flex-row space-between"
                   style={{
                     padding: '0.875rem 0.5rem',
                     borderBottom: index === list.length - 1 ? 'none' : '1px solid var(--border)',
+                    width: '100%',
+                    background: 'none',
+                    borderLeft: 'none',
+                    borderRight: 'none',
+                    borderTop: 'none',
+                    textAlign: 'left',
                   }}
+                  onClick={() => setSelectedTrendMetric(metricFromTimelineEvent(entry.eventType))}
                 >
                   <div className="flex-row">
                     <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: entry.eventType === 'temperature' ? 'var(--danger)' : 'var(--primary)' }} />
@@ -301,9 +319,12 @@ export const DoctorScreen = () => {
                     </div>
                   </div>
                   <ChevronRight size={16} className="text-muted" />
-                </div>
+                </button>
               ))}
             </div>
+            <p className="text-xs text-muted" style={{ marginTop: '0.5rem', marginBottom: 0 }}>
+              Tap a timeline item to load the matching trend graph.
+            </p>
           </section>
 
           <div style={{ position: 'sticky', bottom: '1rem', zIndex: 10 }}>

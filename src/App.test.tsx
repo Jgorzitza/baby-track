@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, renderHook, screen } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import type { PropsWithChildren } from 'react';
 import { AppContext, type AppContextValue } from './lib/app-context.shared';
@@ -10,6 +10,7 @@ import { HomeScreen } from './routes/home/HomeScreen';
 import { DoctorScreen } from './routes/doctor/DoctorScreen';
 import { DoctorQuestionsScreen } from './routes/doctor/DoctorQuestionsScreen';
 import { MedicalTimelineScreen } from './routes/medical-timeline/MedicalTimelineScreen';
+import { ReportsScreen } from './routes/reports/ReportsScreen';
 import { clearPendingMutations, countPendingMutations, getPendingMutations, enqueueMutation } from './lib/offline/queue';
 import { replayPendingMutations } from './lib/offline/replay';
 import type { ActiveFeedSession, DoctorSummary, HomeSummary, QueueItem, ReportsSummary, SyncStatus } from './lib/types';
@@ -413,6 +414,31 @@ describe('Connected Screens', () => {
       doctorSummary: {
         ...baseDoctorSummary,
         appointment: null,
+        timeline: [
+          {
+            id: 'temp-1',
+            householdId: 'household-1',
+            babyId: 'baby-1',
+            sourceTable: 'health_events',
+            sourceId: 'health-1',
+            eventType: 'temperature',
+            occurredAt: '2026-04-08T10:00:00.000Z',
+            title: 'Temperature',
+            summary: '37.8C',
+          },
+        ],
+        temperatures: [
+          {
+            id: 'temp-1',
+            householdId: 'household-1',
+            babyId: 'baby-1',
+            value: 37.8,
+            unit: 'C',
+            occurredAt: '2026-04-08T10:00:00.000Z',
+            notes: null,
+            createdBy: 'profile-1',
+          },
+        ],
         questions: [
           {
             id: 'q-1',
@@ -432,6 +458,8 @@ describe('Connected Screens', () => {
     renderWithContext(<DoctorScreen />, value);
     expect(screen.getByText(/No scheduled appointment/i)).toBeInTheDocument();
     expect(screen.getByText(/1 questions ready for review/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Temperature/i }));
+    expect(screen.getByText(/Temperature Readings/i)).toBeInTheDocument();
   });
 
   it('DoctorQuestionsScreen handles empty questions gracefully', () => {
@@ -458,5 +486,41 @@ describe('Connected Screens', () => {
     expect(screen.getByText(/Diaper 1/i)).toBeInTheDocument();
     expect(screen.getByText(/Temperature 2/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Tracked diaper/i).length).toBeGreaterThan(2);
+  });
+
+  it('ReportsScreen renders a trend explorer with a visual series', () => {
+    const value = createContextValue({
+      reportsSummary: {
+        ...baseReportsSummary,
+        timeline: [
+          {
+            id: 'feed-1',
+            householdId: 'household-1',
+            babyId: 'baby-1',
+            sourceTable: 'feeding_sessions',
+            sourceId: 'source-feed-1',
+            eventType: 'feed',
+            occurredAt: new Date().toISOString(),
+            title: 'Bottle feed',
+            summary: '90ml',
+          },
+          {
+            id: 'feed-2',
+            householdId: 'household-1',
+            babyId: 'baby-1',
+            sourceTable: 'feeding_sessions',
+            sourceId: 'source-feed-2',
+            eventType: 'feed',
+            occurredAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+            title: 'Breastfeed',
+            summary: '18m total',
+          },
+        ],
+      },
+    });
+
+    renderWithContext(<ReportsScreen />, value);
+    expect(screen.getByText(/Trend Explorer/i)).toBeInTheDocument();
+    expect(screen.getByText(/Feeds Over Time/i)).toBeInTheDocument();
   });
 });
