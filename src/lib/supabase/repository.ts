@@ -53,7 +53,7 @@ const getClientOrThrow = () => {
 
 const unwrapRpc = async <T>(name: keyof Database['public']['Functions'], args: Record<string, unknown>, mapper: (value: Json) => T): Promise<T> => {
   const client = getClientOrThrow();
-  const rpc = client.rpc as unknown as (
+  const rpc = client.rpc.bind(client) as unknown as (
     fn: string,
     params?: Record<string, unknown>
   ) => Promise<{ data: Json | null; error: { message: string } | null }>;
@@ -66,7 +66,7 @@ const unwrapRpc = async <T>(name: keyof Database['public']['Functions'], args: R
 
 const unwrapVoidRpc = async (name: keyof Database['public']['Functions'], args: Record<string, unknown>): Promise<void> => {
   const client = getClientOrThrow();
-  const rpc = client.rpc as unknown as (
+  const rpc = client.rpc.bind(client) as unknown as (
     fn: string,
     params?: Record<string, unknown>
   ) => Promise<{ data: Json | null; error: { message: string } | null }>;

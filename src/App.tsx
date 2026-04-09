@@ -96,12 +96,25 @@ const AuthScreen = () => {
         <span>Reset Password</span>
       </button>
 
-      <div className="card">
+      <form
+        className="card"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleSubmit();
+        }}
+      >
         <div className="form-group">
           <label className="form-label">Email Address</label>
           <div className="flex-row">
             <Mail size={18} className="text-muted" />
-            <input type="email" className="form-control" placeholder="parent@example.com" value={email} onChange={(event) => setEmail(event.target.value)} />
+            <input
+              type="email"
+              className="form-control"
+              placeholder="parent@example.com"
+              autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
           </div>
         </div>
 
@@ -114,6 +127,7 @@ const AuthScreen = () => {
                 type="password"
                 className="form-control"
                 placeholder="••••••••"
+                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />
@@ -137,13 +151,13 @@ const AuthScreen = () => {
           </div>
         )}
 
-        <button className="btn btn-primary btn-block" onClick={() => void handleSubmit()} disabled={isRefreshing} style={{ marginTop: '1rem', height: 56 }}>
+        <button type="submit" className="btn btn-primary btn-block" disabled={isRefreshing} style={{ marginTop: '1rem', height: 56 }}>
           {mode === 'reset' ? <KeyRound size={20} /> : <LogIn size={20} />}
           <span>
             {mode === 'signin' ? 'Sign In' : mode === 'signup' ? 'Create Account' : 'Send Reset Email'}
           </span>
         </button>
-      </div>
+      </form>
     </div>
   );
 };
@@ -162,20 +176,27 @@ const ResetPasswordScreen = () => {
 
   return (
     <div className="auth-screen" style={{ padding: '2rem', display: 'grid', placeItems: 'center', minHeight: '100dvh' }}>
-      <div className="card" style={{ width: '100%', maxWidth: 440 }}>
+      <form
+        className="card"
+        style={{ width: '100%', maxWidth: 440 }}
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleSubmit();
+        }}
+      >
         <h2 style={{ marginBottom: '0.75rem' }}>Set New Password</h2>
         <p className="text-muted text-sm">Finish recovery and sign back in on this device.</p>
         <div className="form-group" style={{ marginTop: '1rem' }}>
           <label className="form-label">New Password</label>
-          <input type="password" className="form-control" value={password} onChange={(event) => setPassword(event.target.value)} />
+          <input type="password" className="form-control" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} />
         </div>
         {actionError && <p className="text-sm" style={{ color: 'var(--danger)' }}>{actionError}</p>}
         {message && <p className="text-sm" style={{ color: 'var(--success)' }}>{message}</p>}
-        <button className="btn btn-primary btn-block" disabled={isRefreshing} onClick={() => void handleSubmit()}>
+        <button type="submit" className="btn btn-primary btn-block" disabled={isRefreshing}>
           <KeyRound size={20} />
           <span>Update Password</span>
         </button>
-      </div>
+      </form>
     </div>
   );
 };
@@ -238,8 +259,8 @@ const AppRoutes = () => {
       <Route path="/reset-password" element={<ResetPasswordScreen />} />
 
       <Route element={<ProtectedLayout />}>
-        <Route path="/household" element={<HouseholdScreen />} />
-        <Route path="/baby" element={<BabyProfileScreen />} />
+        <Route path="/household" element={household ? <Navigate to={baby ? '/' : '/baby'} replace /> : <HouseholdScreen />} />
+        <Route path="/baby" element={household ? (baby ? <Navigate to="/" replace /> : <BabyProfileScreen />) : <Navigate to="/household" replace />} />
         <Route
           path="/"
           element={
