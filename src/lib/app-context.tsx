@@ -39,6 +39,7 @@ import type {
   FeedOutcomeFlags,
   FeedSegmentDraft,
   FeedSide,
+  FeedType,
   HomeSummary,
   Household,
   HouseholdMember,
@@ -73,6 +74,7 @@ const emptyReportsSummary: ReportsSummary = {
 const emptyDoctorSummary = (windowLabel: DoctorSummary['windowLabel']): DoctorSummary => ({
   windowLabel,
   appointment: null,
+  appointments: [],
   questions: [],
   feedSessionCount: 0,
   sleepTotalSeconds: 0,
@@ -132,6 +134,19 @@ const buildFeedFlags = (input: {
   spitUp: input.spitUp,
 });
 
+const orderAppointments = (appointments: DoctorAppointment[]): DoctorAppointment[] =>
+  [...appointments].sort((left, right) => {
+    const leftPriority = left.status === 'planned' ? 0 : 1;
+    const rightPriority = right.status === 'planned' ? 0 : 1;
+    if (leftPriority !== rightPriority) {
+      return leftPriority - rightPriority;
+    }
+
+    const leftTime = left.scheduledAt ?? left.createdAt;
+    const rightTime = right.scheduledAt ?? right.createdAt;
+    return leftTime.localeCompare(rightTime);
+  });
+
 export const AppProvider = ({ children }: PropsWithChildren) => {
   const [authStatus, setAuthStatus] = useState<'loading' | 'signed_out' | 'signed_in'>('loading');
   const [session, setSession] = useState<Session | null>(null);
@@ -155,6 +170,7 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
   const [reportsSummary, setReportsSummary] = useState<ReportsSummary>(emptyReportsSummary);
   const [doctorWindowState, setDoctorWindowState] = useState<DoctorSummary['windowLabel']>('48h');
   const [doctorSummary, setDoctorSummary] = useState<DoctorSummary>(() => emptyDoctorSummary('48h'));
+  const [selectedDoctorAppointmentId, setSelectedDoctorAppointmentId] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<MedicalTimelineEvent[]>([]);
   const [syncStatus, setSyncStatus] = useState(() => defaultSyncStatus);
   const sessionRef = useRef<Session | null>(null);
@@ -162,6 +178,7 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
   const householdRef = useRef<Household | null>(null);
   const babyRef = useRef<BabyProfile | null>(null);
   const doctorWindowRef = useRef<DoctorSummary['windowLabel']>(doctorWindowState);
+  const selectedDoctorAppointmentIdRef = useRef<string | null>(selectedDoctorAppointmentId);
   const isSyncingRef = useRef(false);
 
   useEffect(() => {
@@ -183,6 +200,10 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
   useEffect(() => {
     doctorWindowRef.current = doctorWindowState;
   }, [doctorWindowState]);
+
+  useEffect(() => {
+    selectedDoctorAppointmentIdRef.current = selectedDoctorAppointmentId;
+  }, [selectedDoctorAppointmentId]);
 
   const refreshSyncLabel = useCallback(async (hasError = false): Promise<void> => {
     const pendingCount = await countPendingMutations();
@@ -206,6 +227,7 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
       setHomeSummary(emptyHomeSummary);
       setReportsSummary(emptyReportsSummary);
       setDoctorSummary(emptyDoctorSummary(doctorWindowRef.current));
+      setSelectedDoctorAppointmentId(null);
       setTimeline([]);
       return;
     }
@@ -234,19 +256,47 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
     );
     setReportsSummary(cachedReports ?? emptyReportsSummary);
     setDoctorSummary(cachedDoctor ?? emptyDoctorSummary(doctorWindowRef.current));
+    setSelectedDoctorAppointmentId(cachedDoctor?.appointment?.id ?? null);
     setTimeline(cachedTimeline);
   }, []);
 
   const refreshRemoteData = useCallback(async (targetBaby: BabyProfile, targetHousehold: Household, windowLabel: DoctorSummary['windowLabel']): Promise<void> => {
-    const [nextHome, nextReports, nextDoctor, nextTimeline] = await Promise.all([
+    const [nextHome, nextReports, nextDoctorBase, nextTimeline, cachedSleep, cachedFeed, appointments] = await Promise.all([
       appRepository.getHomeSummary(targetBaby.id),
       appRepository.getReportsSummary(targetBaby.id),
       appRepository.getDoctorSummary(targetBaby.id, windowLabel),
       appRepository.getTimeline(targetBaby.id),
+      getActiveSleepCache(targetBaby.id),
+      getActiveFeedCache(targetBaby.id),
+      appRepository.listDoctorAppointments(targetBaby.id),
     ]);
 
+    const mergedHome: HomeSummary = {
+      ...nextHome,
+      activeSleepSession: nextHome.activeSleepSession ?? cachedSleep,
+      activeFeedSession: nextHome.activeFeedSession ?? cachedFeed,
+    };
+
+    const sortedAppointments = orderAppointments(appointments);
+    const nextSelectedAppointmentId =
+      (selectedDoctorAppointmentIdRef.current &&
+      sortedAppointments.some((appointment) => appointment.id === selectedDoctorAppointmentIdRef.current))
+        ? selectedDoctorAppointmentIdRef.current
+        : nextDoctorBase.appointment?.id ?? null;
+    const nextQuestions = nextSelectedAppointmentId
+      ? await appRepository.listDoctorQuestions(targetBaby.id, nextSelectedAppointmentId)
+      : [];
+    const nextSelectedAppointment =
+      sortedAppointments.find((appointment) => appointment.id === nextSelectedAppointmentId) ?? null;
+    const nextDoctor: DoctorSummary = {
+      ...nextDoctorBase,
+      appointment: nextSelectedAppointment,
+      appointments: sortedAppointments,
+      questions: nextQuestions,
+    };
+
     await Promise.all([
-      cacheHomeSummary(targetHousehold.id, targetBaby.id, nextHome),
+      cacheHomeSummary(targetHousehold.id, targetBaby.id, mergedHome),
       cacheReportsSummary(targetHousehold.id, targetBaby.id, nextReports),
       cacheDoctorSummary(targetHousehold.id, targetBaby.id, nextDoctor),
       cacheTimeline(targetHousehold.id, targetBaby.id, nextTimeline),
@@ -254,9 +304,10 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
     ]);
 
     startTransition(() => {
-      setHomeSummary(nextHome);
+      setHomeSummary(mergedHome);
       setReportsSummary(nextReports);
       setDoctorSummary(nextDoctor);
+      setSelectedDoctorAppointmentId(nextSelectedAppointmentId);
       setTimeline(nextTimeline);
     });
   }, []);
@@ -305,6 +356,9 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
         return;
       case 'upsert_doctor_appointment':
         await appRepository.upsertDoctorAppointment(item.payload as Parameters<typeof appRepository.upsertDoctorAppointment>[0]);
+        return;
+      case 'delete_doctor_appointment':
+        await appRepository.deleteDoctorAppointment(item.payload as Parameters<typeof appRepository.deleteDoctorAppointment>[0]);
         return;
       case 'add_doctor_question':
         await appRepository.addDoctorQuestion(item.payload as Parameters<typeof appRepository.addDoctorQuestion>[0]);
@@ -357,6 +411,7 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
       setHomeSummary(emptyHomeSummary);
       setReportsSummary(emptyReportsSummary);
       setDoctorSummary(emptyDoctorSummary(doctorWindowRef.current));
+      setSelectedDoctorAppointmentId(null);
       setTimeline([]);
       await refreshSyncLabel();
       return;
@@ -688,7 +743,7 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
     updateHomeState((previous) => ({ ...previous, activeFeedSession: nextSession }));
   };
 
-  const toggleFeedSide = async (side: FeedSide): Promise<void> => {
+  const toggleFeedSide = async (side: FeedSide, feedType: Extract<FeedType, 'breast' | 'pumping'> = 'breast'): Promise<void> => {
     await withMutation(async () => {
       const base = requireBootstrap();
       const now = getNowIso();
@@ -700,7 +755,7 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
           id: sessionId,
           householdId: base.household.id,
           babyId: base.baby.id,
-          feedType: 'breast',
+          feedType,
           startedAt: now,
           activeSide: null,
           activeSegmentId: null,
@@ -719,7 +774,7 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
             householdId: base.household.id,
             babyId: base.baby.id,
             startedAt: now,
-            feedType: 'breast',
+            feedType,
           },
           createdAt: now,
           attemptCount: 0,
@@ -842,7 +897,7 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
   };
 
   const finishFeedSession = async (input: {
-    feedType: 'breast' | 'bottle';
+    feedType: FeedType;
     outcome: FeedOutcome;
     latchIssue: boolean;
     sleepyFeed: boolean;
@@ -934,7 +989,12 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
         sourceId: activeSession.id,
         eventType: 'feed',
         occurredAt: activeSession.startedAt,
-        title: input.feedType === 'bottle' ? 'Bottle feed' : 'Breastfeed',
+        title:
+          input.feedType === 'bottle'
+            ? 'Bottle feed'
+            : input.feedType === 'pumping'
+              ? 'Pumping session'
+              : 'Breastfeed',
         summary:
           input.feedType === 'bottle'
             ? `${input.bottleAmount ?? 0}${input.bottleUnit ?? 'ml'}`
@@ -1245,7 +1305,10 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
     await withMutation(async () => {
       const base = requireBootstrap();
       const now = getNowIso();
-      const appointmentId = input.id ?? doctorSummary.appointment?.id ?? createClientId();
+      const appointmentId = input.id ?? selectedDoctorAppointmentIdRef.current ?? createClientId();
+      const currentAppointment =
+        doctorSummary.appointments.find((appointment) => appointment.id === appointmentId) ??
+        (doctorSummary.appointment?.id === appointmentId ? doctorSummary.appointment : null);
       const optimisticAppointment: DoctorAppointment = {
         id: appointmentId,
         householdId: base.household.id,
@@ -1257,15 +1320,22 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
         visitNotes: input.visitNotes,
         status: input.status,
         createdBy: base.profile.id,
-        createdAt: now,
+        createdAt: currentAppointment?.createdAt ?? now,
         updatedAt: now,
       };
+      selectedDoctorAppointmentIdRef.current = appointmentId;
       startTransition(() =>
         setDoctorSummary((previous) => ({
           ...previous,
           appointment: optimisticAppointment,
+          appointments: orderAppointments([
+            optimisticAppointment,
+            ...previous.appointments.filter((appointment) => appointment.id !== appointmentId),
+          ]),
+          questions: previous.appointment?.id === appointmentId ? previous.questions : [],
         }))
       );
+      setSelectedDoctorAppointmentId(appointmentId);
       await queueAndMaybeReplay({
         id: createClientId(),
         entityType: 'doctor_appointment',
@@ -1293,12 +1363,74 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
     });
   };
 
-  const addDoctorQuestion = async (question: string): Promise<void> => {
+  const deleteDoctorAppointment = async (appointmentId: string): Promise<void> => {
+    await withMutation(async () => {
+      const base = requireBootstrap();
+      const remainingAppointments = doctorSummary.appointments.filter((appointment) => appointment.id !== appointmentId);
+      const nextAppointment = remainingAppointments[0] ?? null;
+      selectedDoctorAppointmentIdRef.current = nextAppointment?.id ?? null;
+      setSelectedDoctorAppointmentId(nextAppointment?.id ?? null);
+      startTransition(() => {
+        setDoctorSummary((previous) => ({
+          ...previous,
+          appointment: previous.appointment?.id === appointmentId ? nextAppointment : previous.appointment,
+          appointments: remainingAppointments,
+          questions:
+            previous.appointment?.id === appointmentId
+              ? []
+              : previous.questions.filter((question) => question.doctorAppointmentId !== appointmentId),
+          timeline: previous.timeline.filter(
+            (event) => !(event.sourceTable === 'doctor_appointments' && event.sourceId === appointmentId)
+          ),
+        }));
+        setTimeline((previous) =>
+          previous.filter(
+            (event) => !(event.sourceTable === 'doctor_appointments' && event.sourceId === appointmentId)
+          )
+        );
+      });
+      await queueAndMaybeReplay({
+        id: createClientId(),
+        entityType: 'doctor_appointment',
+        entityId: appointmentId,
+        operation: 'delete_doctor_appointment',
+        householdId: base.household.id,
+        babyId: base.baby.id,
+        payload: {
+          appointmentId,
+          householdId: base.household.id,
+          babyId: base.baby.id,
+        },
+        createdAt: getNowIso(),
+        attemptCount: 0,
+        lastError: null,
+        nextRetryAt: null,
+      });
+    });
+  };
+
+  const addDoctorQuestion = async (question: string, appointmentIdOverride?: string): Promise<void> => {
     await withMutation(async () => {
       const base = requireBootstrap();
       const now = getNowIso();
-      const appointmentId = doctorSummary.appointment?.id ?? createClientId();
+      const appointmentId = appointmentIdOverride ?? selectedDoctorAppointmentIdRef.current ?? createClientId();
       const questionId = createClientId();
+      const optimisticAppointment: DoctorAppointment = doctorSummary.appointment?.id === appointmentId
+        ? doctorSummary.appointment
+        : {
+            id: appointmentId,
+            householdId: base.household.id,
+            babyId: base.baby.id,
+            provider: null,
+            scheduledAt: null,
+            location: null,
+            planningNotes: null,
+            visitNotes: null,
+            status: 'unscheduled',
+            createdBy: base.profile.id,
+            createdAt: now,
+            updatedAt: now,
+          };
       const optimisticQuestion: DoctorQuestion = {
         id: questionId,
         householdId: base.household.id,
@@ -1308,26 +1440,20 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
         createdAt: now,
         createdBy: base.profile.id,
       };
+      selectedDoctorAppointmentIdRef.current = appointmentId;
+      setSelectedDoctorAppointmentId(appointmentId);
       startTransition(() =>
         setDoctorSummary((previous) => ({
           ...previous,
-          appointment:
-            previous.appointment ??
-            {
-              id: appointmentId,
-              householdId: base.household.id,
-              babyId: base.baby.id,
-              provider: null,
-              scheduledAt: null,
-              location: null,
-              planningNotes: null,
-              visitNotes: null,
-              status: 'unscheduled',
-              createdBy: base.profile.id,
-              createdAt: now,
-              updatedAt: now,
-            },
-          questions: [...previous.questions, optimisticQuestion],
+          appointment: optimisticAppointment,
+          appointments: orderAppointments([
+            optimisticAppointment,
+            ...previous.appointments.filter((appointment) => appointment.id !== appointmentId),
+          ]),
+          questions:
+            previous.appointment?.id === appointmentId || previous.appointment == null
+              ? [...previous.questions, optimisticQuestion]
+              : [optimisticQuestion],
         }))
       );
       await queueAndMaybeReplay({
@@ -1381,11 +1507,49 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
     });
   };
 
-  const addDoctorNote = async (note: string): Promise<void> => {
+  const addDoctorNote = async (note: string, appointmentIdOverride?: string): Promise<void> => {
     await withMutation(async () => {
       const base = requireBootstrap();
       const now = getNowIso();
-      const appointmentId = doctorSummary.appointment?.id ?? createClientId();
+      const appointmentId = appointmentIdOverride ?? selectedDoctorAppointmentIdRef.current ?? createClientId();
+      const currentAppointment = doctorSummary.appointments.find((appointment) => appointment.id === appointmentId) ?? doctorSummary.appointment;
+      const nextVisitNotes = [currentAppointment?.visitNotes, `${new Date(now).toLocaleString()} ${note}`]
+        .filter((value) => Boolean(value && value.trim().length > 0))
+        .join('\n');
+      const optimisticAppointment: DoctorAppointment = currentAppointment ?? {
+        id: appointmentId,
+        householdId: base.household.id,
+        babyId: base.baby.id,
+        provider: null,
+        scheduledAt: null,
+        location: null,
+        planningNotes: null,
+        visitNotes: null,
+        status: 'unscheduled',
+        createdBy: base.profile.id,
+        createdAt: now,
+        updatedAt: now,
+      };
+      selectedDoctorAppointmentIdRef.current = appointmentId;
+      setSelectedDoctorAppointmentId(appointmentId);
+      startTransition(() =>
+        setDoctorSummary((previous) => ({
+          ...previous,
+          appointment: {
+            ...optimisticAppointment,
+            visitNotes: nextVisitNotes,
+            updatedAt: now,
+          },
+          appointments: orderAppointments([
+            {
+              ...optimisticAppointment,
+              visitNotes: nextVisitNotes,
+              updatedAt: now,
+            },
+            ...previous.appointments.filter((appointment) => appointment.id !== appointmentId),
+          ]),
+        }))
+      );
       await queueAndMaybeReplay({
         id: createClientId(),
         entityType: 'doctor_note',
@@ -1408,13 +1572,33 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
     });
   };
 
+  const setSelectedDoctorAppointment = async (appointmentId: string | null): Promise<void> => {
+    setSelectedDoctorAppointmentId(appointmentId);
+    selectedDoctorAppointmentIdRef.current = appointmentId;
+
+    if (!baby) {
+      return;
+    }
+
+    const selectedAppointment = appointmentId
+      ? doctorSummary.appointments.find((appointment) => appointment.id === appointmentId) ?? null
+      : null;
+    const nextQuestions =
+      selectedAppointment ? await appRepository.listDoctorQuestions(baby.id, selectedAppointment.id) : [];
+    startTransition(() =>
+      setDoctorSummary((previous) => ({
+        ...previous,
+        appointment: selectedAppointment,
+        questions: nextQuestions,
+      }))
+    );
+  };
+
   const setDoctorWindow = async (windowLabel: DoctorSummary['windowLabel']): Promise<void> => {
     setDoctorWindowState(windowLabel);
     if (baby && household && session && isOnline) {
       await withMutation(async () => {
-        const nextDoctor = await appRepository.getDoctorSummary(baby.id, windowLabel);
-        await cacheDoctorSummary(household.id, baby.id, nextDoctor);
-        setDoctorSummary(nextDoctor);
+        await refreshRemoteData(baby, household, windowLabel);
       });
     } else {
       setDoctorSummary((previous) => ({ ...previous, windowLabel }));
@@ -1447,6 +1631,7 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
     timeline,
     syncStatus,
     doctorWindow: doctorWindowState,
+    selectedDoctorAppointmentId,
     signIn,
     signUp,
     requestPasswordReset,
@@ -1468,9 +1653,11 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
     logSymptom,
     logGrowth,
     saveDoctorAppointment,
+    deleteDoctorAppointment,
     addDoctorQuestion,
     deleteDoctorQuestion,
     addDoctorNote,
+    setSelectedDoctorAppointment,
     setDoctorWindow,
     refreshData,
   };

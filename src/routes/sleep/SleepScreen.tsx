@@ -6,9 +6,10 @@ import { formatElapsedClock } from '../../lib/time';
 
 export const SleepScreen = () => {
   const navigate = useNavigate();
-  const { timeline, homeSummary } = useAppContext();
+  const { timeline, homeSummary, baby } = useAppContext();
   const { isAsleep, startTime, elapsed, toggleSleep, formatElapsed } = useSleepTimer();
   const lastSleep = timeline.find((event) => event.eventType === 'sleep');
+  const babyName = baby?.name ?? 'Baby';
 
   return (
     <div className="sleep-screen">
@@ -21,7 +22,7 @@ export const SleepScreen = () => {
           {isAsleep ? <Square size={48} /> : <Play size={48} />}
         </div>
         
-        <h2>{isAsleep ? 'Leo is Asleep' : 'Leo is Awake'}</h2>
+        <h2>{isAsleep ? `${babyName} is Asleep` : `${babyName} is Awake`}</h2>
         {isAsleep && startTime && (
           <div style={{ marginTop: '0.5rem' }}>
             <div style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--primary-dark)' }}>

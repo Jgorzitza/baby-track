@@ -126,11 +126,12 @@ export const mapFeedingSegment = (value: Json): FeedingSegment => {
 
 export const mapFeedSession = (value: Json): FeedSession => {
   const row = asObject(value);
+  const feedType = asString(row.feed_type);
   return {
     id: asString(row.id),
     householdId: asString(row.household_id),
     babyId: asString(row.baby_id),
-    feedType: asString(row.feed_type) === 'bottle' ? 'bottle' : 'breast',
+    feedType: feedType === 'bottle' || feedType === 'pumping' ? feedType : 'breast',
     startedAt: asString(row.started_at),
     finishedAt: asNullableString(row.finished_at),
     outcome:
@@ -148,11 +149,12 @@ export const mapFeedSession = (value: Json): FeedSession => {
 
 export const mapActiveFeedSession = (value: Json): ActiveFeedSession => {
   const row = asObject(value);
+  const feedType = asString(row.feedType);
   return {
     id: asString(row.id),
     householdId: asString(row.householdId),
     babyId: asString(row.babyId),
-    feedType: asString(row.feedType) === 'bottle' ? 'bottle' : 'breast',
+    feedType: feedType === 'bottle' || feedType === 'pumping' ? feedType : 'breast',
     startedAt: asString(row.startedAt),
     activeSide: asString(row.activeSide) === 'left' || asString(row.activeSide) === 'right' ? (asString(row.activeSide) as 'left' | 'right') : null,
     activeSegmentId: asNullableString(row.activeSegmentId),
@@ -327,6 +329,7 @@ export const mapDoctorSummary = (value: Json): DoctorSummary => {
   return {
     windowLabel: asString(row.windowLabel) === '24h' || asString(row.windowLabel) === '7d' ? (asString(row.windowLabel) as '24h' | '7d') : '48h',
     appointment: row.appointment ? mapDoctorAppointment(row.appointment as Json) : null,
+    appointments: asArray(row.appointments).map(mapDoctorAppointment),
     questions: asArray(row.questions).map(mapDoctorQuestion),
     feedSessionCount: asNumber(row.feedSessionCount),
     sleepTotalSeconds: asNumber(row.sleepTotalSeconds),

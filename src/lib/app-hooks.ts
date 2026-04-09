@@ -55,8 +55,11 @@ export const useDoctorSummary = () => {
   const {
     doctorSummary,
     doctorWindow,
+    selectedDoctorAppointmentId,
+    setSelectedDoctorAppointment,
     setDoctorWindow,
     saveDoctorAppointment,
+    deleteDoctorAppointment,
     addDoctorQuestion,
     deleteDoctorQuestion,
     addDoctorNote,
@@ -65,8 +68,11 @@ export const useDoctorSummary = () => {
   return {
     doctorSummary,
     doctorWindow,
+    selectedDoctorAppointmentId,
+    setSelectedDoctorAppointment,
     setDoctorWindow,
     saveDoctorAppointment,
+    deleteDoctorAppointment,
     addDoctorQuestion,
     deleteDoctorQuestion,
     addDoctorNote,

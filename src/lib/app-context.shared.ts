@@ -1,6 +1,6 @@
 import { createContext } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import type { AppConfigError, BabyProfile, DiaperEvent, DoctorAppointment, DoctorSummary, FeedOutcome, HomeSummary, Household, HouseholdMember, MedicalTimelineEvent, ParentProfile, ReportsSummary, SyncStatus } from './types';
+import type { AppConfigError, BabyProfile, DiaperEvent, DoctorAppointment, DoctorSummary, FeedOutcome, FeedType, HomeSummary, Household, HouseholdMember, MedicalTimelineEvent, ParentProfile, ReportsSummary, SyncStatus } from './types';
 
 type AuthStatus = 'loading' | 'signed_out' | 'signed_in';
 
@@ -22,6 +22,7 @@ export interface AppContextValue {
   timeline: MedicalTimelineEvent[];
   syncStatus: SyncStatus;
   doctorWindow: DoctorSummary['windowLabel'];
+  selectedDoctorAppointmentId: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
@@ -38,9 +39,9 @@ export interface AppContextValue {
   }) => Promise<void>;
   startSleep: () => Promise<void>;
   finishSleep: () => Promise<void>;
-  toggleFeedSide: (side: 'left' | 'right') => Promise<void>;
+  toggleFeedSide: (side: 'left' | 'right', feedType?: Extract<FeedType, 'breast' | 'pumping'>) => Promise<void>;
   finishFeedSession: (input: {
-    feedType: 'breast' | 'bottle';
+    feedType: FeedType;
     outcome: FeedOutcome;
     latchIssue: boolean;
     sleepyFeed: boolean;
@@ -79,9 +80,11 @@ export interface AppContextValue {
     visitNotes: string | null;
     status: DoctorAppointment['status'];
   }) => Promise<void>;
-  addDoctorQuestion: (question: string) => Promise<void>;
+  deleteDoctorAppointment: (appointmentId: string) => Promise<void>;
+  addDoctorQuestion: (question: string, appointmentId?: string) => Promise<void>;
   deleteDoctorQuestion: (questionId: string) => Promise<void>;
-  addDoctorNote: (note: string) => Promise<void>;
+  addDoctorNote: (note: string, appointmentId?: string) => Promise<void>;
+  setSelectedDoctorAppointment: (appointmentId: string | null) => Promise<void>;
   setDoctorWindow: (windowLabel: DoctorSummary['windowLabel']) => Promise<void>;
   refreshData: () => Promise<void>;
 }

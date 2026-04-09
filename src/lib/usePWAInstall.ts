@@ -10,16 +10,21 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export const usePWAInstall = () => {
+  const getIsStandalone = () =>
+    window.matchMedia('(display-mode: standalone)').matches ||
+    ((window.navigator as Navigator & { standalone?: boolean }).standalone ?? false);
+  const getManualInstallSupport = () => {
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isIos = /iphone|ipad|ipod/.test(userAgent);
+    const isSafari = /safari/.test(userAgent) && !/crios|fxios|edgios/.test(userAgent);
+    return isIos && isSafari && !getIsStandalone();
+  };
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installState, setInstallState] = useState<'idle' | 'prompting' | 'dismissed' | 'accepted' | 'error'>('idle');
   const [installError, setInstallError] = useState<string | null>(null);
-  const [isInstallable, setIsInstallable] = useState(() => {
-    // Initial check: if already in standalone, it's not installable
-    if (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) {
-      return false;
-    }
-    return false; // Default to false until event fires
-  });
+  const [isInstallable, setIsInstallable] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(() => getIsStandalone());
+  const [showManualInstallHint, setShowManualInstallHint] = useState(() => getManualInstallSupport());
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -35,6 +40,8 @@ export const usePWAInstall = () => {
     const handleInstalled = () => {
       setDeferredPrompt(null);
       setIsInstallable(false);
+      setIsInstalled(true);
+      setShowManualInstallHint(false);
       setInstallState('accepted');
       setInstallError(null);
     };
@@ -78,5 +85,13 @@ export const usePWAInstall = () => {
     }
   };
 
-  return { isInstallable, install, installState, installError };
+  return {
+    isInstallable,
+    isInstalled,
+    showManualInstallHint,
+    manualInstallMessage: showManualInstallHint ? 'Open Safari share menu and choose Add to Home Screen.' : null,
+    install,
+    installState,
+    installError,
+  };
 };

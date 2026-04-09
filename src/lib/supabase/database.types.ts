@@ -896,6 +896,14 @@ export type Database = {
         Returns: Json
       }
       app_current_user_id: { Args: never; Returns: string }
+      app_delete_doctor_appointment: {
+        Args: {
+          p_appointment_id: string
+          p_baby_id: string
+          p_household_id: string
+        }
+        Returns: undefined
+      }
       app_delete_doctor_question: {
         Args: { p_household_id: string; p_question_id: string }
         Returns: undefined

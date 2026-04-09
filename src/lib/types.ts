@@ -9,7 +9,7 @@ export type EntryType =
   | 'appointment'
   | 'note';
 
-export type FeedType = 'breast' | 'bottle';
+export type FeedType = 'breast' | 'bottle' | 'pumping';
 export type FeedSide = 'left' | 'right';
 export type FeedSideState = FeedSide | null;
 export type FeedOutcome = 'good' | 'fair' | 'poor' | 'latch_issue' | 'sleepy' | 'refused' | 'spit_up';
@@ -235,6 +235,7 @@ export interface ReportsSummary {
 export interface DoctorSummary {
   windowLabel: '24h' | '48h' | '7d';
   appointment: DoctorAppointment | null;
+  appointments: DoctorAppointment[];
   questions: DoctorQuestion[];
   feedSessionCount: number;
   sleepTotalSeconds: number;
@@ -294,6 +295,7 @@ export type MutationOperation =
   | 'log_symptom'
   | 'log_growth'
   | 'upsert_doctor_appointment'
+  | 'delete_doctor_appointment'
   | 'add_doctor_question'
   | 'delete_doctor_question'
   | 'add_doctor_note';

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { User, Users, Bell, Shield, LogOut, ChevronRight, Settings2, Download, RefreshCcw } from 'lucide-react';
 import { useUnitPrefs } from '../../lib/useUnitPrefs';
 import { usePWAInstall } from '../../lib/usePWAInstall';
@@ -5,8 +6,33 @@ import { useAppContext } from '../../lib/app-hooks';
 
 export const SettingsScreen = () => {
   const { prefs, updatePref } = useUnitPrefs();
-  const { isInstallable, install, installState, installError } = usePWAInstall();
+  const { isInstallable, install, installState, installError, showManualInstallHint, manualInstallMessage } = usePWAInstall();
   const { profile, household, members, signOut, syncStatus, refreshData } = useAppContext();
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>(() =>
+    typeof Notification === 'undefined' ? 'unsupported' : Notification.permission
+  );
+
+  useEffect(() => {
+    if (typeof Notification === 'undefined') {
+      return;
+    }
+
+    const syncPermission = () => {
+      setNotificationPermission(Notification.permission);
+    };
+
+    window.addEventListener('focus', syncPermission);
+    return () => window.removeEventListener('focus', syncPermission);
+  }, []);
+
+  const requestNotifications = async (): Promise<void> => {
+    if (typeof Notification === 'undefined') {
+      setNotificationPermission('unsupported');
+      return;
+    }
+    const nextPermission = await Notification.requestPermission();
+    setNotificationPermission(nextPermission);
+  };
 
   return (
     <div className="settings-screen">
@@ -22,31 +48,33 @@ export const SettingsScreen = () => {
         </div>
       </div>
 
-      {isInstallable && (
+      {(isInstallable || showManualInstallHint) && (
         <section>
           <h4>App Shell</h4>
-          <button
-            type="button"
+          <div
             className="card"
             style={{
               background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
               color: 'white',
-              width: '100%',
-              border: 'none',
-              textAlign: 'left',
-              cursor: 'pointer',
             }}
-            onClick={install}
           >
             <div className="flex-row">
               <Download size={24} />
               <div>
                 <div className="font-bold">Install bbtrack</div>
-                <p className="text-xs" style={{ margin: 0, opacity: 0.9 }}>Add to home screen for a native experience</p>
+                <p className="text-xs" style={{ margin: 0, opacity: 0.9 }}>
+                  {isInstallable ? 'Add to home screen for a native experience' : manualInstallMessage}
+                </p>
               </div>
             </div>
-          </button>
-          {(installError || installState === 'dismissed') && (
+            {isInstallable && (
+              <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: '0.75rem' }} onClick={install}>
+                <Download size={18} />
+                <span>Show Install Prompt</span>
+              </button>
+            )}
+          </div>
+          {(installError || installState === 'dismissed') && isInstallable && (
             <p className="text-xs" style={{ marginTop: '0.5rem', color: 'var(--danger)' }}>
               {installError}
             </p>
@@ -54,7 +82,7 @@ export const SettingsScreen = () => {
         </section>
       )}
 
-      <section style={{ marginTop: isInstallable ? '1.5rem' : 0 }}>
+      <section style={{ marginTop: isInstallable || showManualInstallHint ? '1.5rem' : 0 }}>
         <h4>Sync</h4>
         <div className="card">
           <div className="flex-row space-between" style={{ paddingBottom: '0.75rem', borderBottom: '1px solid var(--border)' }}>
@@ -139,6 +167,18 @@ export const SettingsScreen = () => {
               </button>
             </div>
           </div>
+
+          <div className="form-group" style={{ paddingTop: '0.75rem', marginBottom: 0 }}>
+            <label className="form-label">Height</label>
+            <div className="grid-2">
+              <button className={`btn ${prefs.length === 'cm' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => updatePref('length', 'cm')} style={{ height: 40 }}>
+                Centimeters (cm)
+              </button>
+              <button className={`btn ${prefs.length === 'in' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => updatePref('length', 'in')} style={{ height: 40 }}>
+                Inches (in)
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -150,8 +190,19 @@ export const SettingsScreen = () => {
               <Bell size={20} className="text-muted" />
               <span>Notifications</span>
             </div>
-            <ChevronRight size={20} className="text-muted" />
+            <button type="button" className="btn btn-secondary text-xs" style={{ minHeight: 40 }} onClick={() => void requestNotifications()}>
+              {notificationPermission === 'granted' ? 'Enabled' : notificationPermission === 'denied' ? 'Blocked' : notificationPermission === 'unsupported' ? 'Unavailable' : 'Enable'}
+            </button>
           </div>
+          <p className="text-xs text-muted" style={{ marginTop: '0.75rem', marginBottom: 0 }}>
+            {notificationPermission === 'granted'
+              ? 'Browser notifications are enabled on this device.'
+              : notificationPermission === 'denied'
+                ? 'Notifications are blocked in the browser. Re-enable them from site settings.'
+                : notificationPermission === 'unsupported'
+                  ? 'This browser does not support notification prompts for bbtrack.'
+                  : 'Allow browser notifications so bbtrack can use them when reminder flows are added.'}
+          </p>
         </div>
       </section>
 

@@ -34,6 +34,7 @@ const baseHomeSummary: HomeSummary = {
 const baseDoctorSummary: DoctorSummary = {
   windowLabel: '48h',
   appointment: null,
+  appointments: [],
   questions: [],
   feedSessionCount: 3,
   sleepTotalSeconds: 12_600,
@@ -105,6 +106,7 @@ const createContextValue = (overrides: Partial<AppContextValue> = {}): AppContex
   timeline: [],
   syncStatus: baseSyncStatus,
   doctorWindow: '48h',
+  selectedDoctorAppointmentId: null,
   signIn: noopAsync,
   signUp: noopAsync,
   requestPasswordReset: noopAsync,
@@ -126,9 +128,11 @@ const createContextValue = (overrides: Partial<AppContextValue> = {}): AppContex
   logSymptom: noopAsync,
   logGrowth: noopAsync,
   saveDoctorAppointment: noopAsync,
+  deleteDoctorAppointment: noopAsync,
   addDoctorQuestion: noopAsync,
   deleteDoctorQuestion: noopAsync,
   addDoctorNote: noopAsync,
+  setSelectedDoctorAppointment: async () => undefined,
   setDoctorWindow: async () => undefined,
   refreshData: noopAsync,
   ...overrides,
@@ -243,6 +247,7 @@ describe('Unit Preferences', () => {
       temp: 'C',
       weight: 'kg',
       volume: 'ml',
+      length: 'cm',
     });
   });
 
@@ -255,6 +260,7 @@ describe('Unit Preferences', () => {
       temp: 'C',
       weight: 'kg',
       volume: 'ml',
+      length: 'cm',
     });
   });
 });

@@ -112,7 +112,7 @@ export const ReportsScreen = () => {
       </section>
 
       <div style={{ marginTop: '1.5rem' }}>
-        <button className="btn btn-secondary btn-block">
+        <button className="btn btn-secondary btn-block" onClick={() => navigate('/timeline')}>
           <BarChart2 size={20} />
           <span>Detailed Trends</span>
         </button>

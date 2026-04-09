@@ -9,14 +9,15 @@ import { useAppContext } from '../../lib/app-hooks';
 export const FeedScreen = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { timeline, finishFeedSession } = useAppContext();
+  const { timeline, finishFeedSession, homeSummary } = useAppContext();
   const { activeSide, leftSeconds, rightSeconds, toggleSide, undo, reset, formatTime, totalSeconds, canUndo } = useFeedingTimer();
   const [outcome, setOutcome] = useState<FeedOutcome | ''>('');
-  const [feedType, setFeedType] = useState<'breast' | 'bottle'>(() => {
-    return (location.state as { defaultType?: 'breast' | 'bottle' })?.defaultType || 'breast';
+  const [feedType, setFeedType] = useState<'breast' | 'bottle' | 'pumping'>(() => {
+    return (location.state as { defaultType?: 'breast' | 'bottle' | 'pumping' })?.defaultType || 'breast';
   });
   const [amount, setAmount] = useState<number>(0);
   const { prefs } = useUnitPrefs();
+  const currentFeedType = homeSummary.activeFeedSession?.feedType ?? feedType;
 
   const outcomes: { label: string; value: FeedOutcome }[] = [
     { label: 'Good', value: 'good' },
@@ -29,18 +30,18 @@ export const FeedScreen = () => {
   ];
 
   const handleFinish = () => {
-    if (feedType === 'breast' && totalSeconds === 0) return;
-    if (feedType === 'bottle' && amount === 0) return;
+    if ((currentFeedType === 'breast' || currentFeedType === 'pumping') && totalSeconds === 0) return;
+    if (currentFeedType === 'bottle' && amount === 0) return;
 
     void finishFeedSession({
-      feedType,
+      feedType: currentFeedType,
       outcome: outcome || 'good',
       latchIssue: outcome === 'latch_issue',
       sleepyFeed: outcome === 'sleepy',
       refusedFeed: outcome === 'refused',
       spitUp: outcome === 'spit_up',
-      bottleAmount: feedType === 'bottle' ? amount : null,
-      bottleUnit: feedType === 'bottle' ? (prefs.volume as 'ml' | 'oz') : null,
+      bottleAmount: currentFeedType === 'bottle' ? amount : null,
+      bottleUnit: currentFeedType === 'bottle' ? (prefs.volume as 'ml' | 'oz') : null,
     }).then(() => {
       navigate('/');
     });
@@ -52,15 +53,21 @@ export const FeedScreen = () => {
     <div className="feed-screen">
       <div className="card">
         <div className="flex-row space-between" style={{ marginBottom: '1.5rem' }}>
-          <div className="grid-2" style={{ flex: 1 }}>
+          <div className="grid-3" style={{ flex: 1 }}>
             <button 
-              className={`btn ${feedType === 'breast' ? 'btn-primary' : 'btn-secondary'}`}
+              className={`btn ${currentFeedType === 'breast' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFeedType('breast')}
             >
               Breast
             </button>
             <button 
-              className={`btn ${feedType === 'bottle' ? 'btn-primary' : 'btn-secondary'}`}
+              className={`btn ${currentFeedType === 'pumping' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setFeedType('pumping')}
+            >
+              Pumping
+            </button>
+            <button 
+              className={`btn ${currentFeedType === 'bottle' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFeedType('bottle')}
             >
               Bottle
@@ -68,8 +75,11 @@ export const FeedScreen = () => {
           </div>
         </div>
 
-        {feedType === 'breast' ? (
+        {currentFeedType === 'breast' || currentFeedType === 'pumping' ? (
           <>
+            <div className="text-center text-sm text-muted" style={{ marginBottom: '0.75rem' }}>
+              {currentFeedType === 'pumping' ? 'Track left and right pumping time separately.' : 'Track left and right breastfeeding time.'}
+            </div>
             <div className="flex-row" style={{ justifyContent: 'space-around', margin: '2rem 0' }}>
               <button 
                 className={`btn flex-col ${activeSide === 'left' ? 'btn-primary' : 'btn-secondary'}`}
@@ -87,7 +97,7 @@ export const FeedScreen = () => {
                   boxShadow: activeSide === 'left' ? '0 8px 24px rgba(135, 206, 235, 0.4)' : 'none',
                   border: activeSide === 'left' ? 'none' : '2px solid var(--border)'
                 }}
-                onClick={() => toggleSide('left')}
+                onClick={() => toggleSide('left', currentFeedType === 'pumping' ? 'pumping' : 'breast')}
               >
                 <span className="text-xs font-bold" style={{ letterSpacing: '0.05em', opacity: 0.8 }}>LEFT</span>
                 <span style={{ fontSize: '1.75rem', fontWeight: 800 }}>{formatTime(leftSeconds)}</span>
@@ -109,7 +119,7 @@ export const FeedScreen = () => {
                   boxShadow: activeSide === 'right' ? '0 8px 24px rgba(135, 206, 235, 0.4)' : 'none',
                   border: activeSide === 'right' ? 'none' : '2px solid var(--border)'
                 }}
-                onClick={() => toggleSide('right')}
+                onClick={() => toggleSide('right', currentFeedType === 'pumping' ? 'pumping' : 'breast')}
               >
                 <span className="text-xs font-bold" style={{ letterSpacing: '0.05em', opacity: 0.8 }}>RIGHT</span>
                 <span style={{ fontSize: '1.75rem', fontWeight: 800 }}>{formatTime(rightSeconds)}</span>

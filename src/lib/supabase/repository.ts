@@ -208,6 +208,33 @@ export const appRepository = {
       mapDoctorSummary
     );
   },
+  async listDoctorAppointments(babyId: string): Promise<DoctorAppointment[]> {
+    const client = getClientOrThrow();
+    const { data, error } = await client
+      .from('doctor_appointments')
+      .select('*')
+      .eq('baby_id', babyId)
+      .neq('status', 'cancelled')
+      .order('scheduled_at', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: false });
+    if (error) {
+      throw new Error(error.message);
+    }
+    return (data ?? []).map((row) => mapDoctorAppointment(row as unknown as Json));
+  },
+  async listDoctorQuestions(babyId: string, appointmentId: string): Promise<DoctorQuestion[]> {
+    const client = getClientOrThrow();
+    const { data, error } = await client
+      .from('doctor_questions')
+      .select('*')
+      .eq('baby_id', babyId)
+      .eq('doctor_appointment_id', appointmentId)
+      .order('created_at', { ascending: true });
+    if (error) {
+      throw new Error(error.message);
+    }
+    return (data ?? []).map((row) => mapDoctorQuestion(row as unknown as Json));
+  },
   async getTimeline(babyId: string, limitCount = 50) {
     return unwrapRpc(
       'app_get_medical_timeline',
@@ -474,6 +501,17 @@ export const appRepository = {
       },
       mapDoctorAppointment
     );
+  },
+  async deleteDoctorAppointment(payload: {
+    appointmentId: string;
+    householdId: string;
+    babyId: string;
+  }): Promise<void> {
+    await unwrapVoidRpc('app_delete_doctor_appointment', {
+      p_appointment_id: payload.appointmentId,
+      p_household_id: payload.householdId,
+      p_baby_id: payload.babyId,
+    });
   },
   async addDoctorQuestion(payload: {
     questionId: string;

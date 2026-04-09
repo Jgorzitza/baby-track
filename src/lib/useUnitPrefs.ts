@@ -3,11 +3,13 @@ import { useState, useEffect } from 'react';
 export type TempUnit = 'C' | 'F';
 export type WeightUnit = 'kg' | 'lb';
 export type VolumeUnit = 'ml' | 'oz';
+export type LengthUnit = 'cm' | 'in';
 
 export interface UnitPreferences {
   temp: TempUnit;
   weight: WeightUnit;
   volume: VolumeUnit;
+  length: LengthUnit;
 }
 
 const STORAGE_KEY = 'bbtrack_unit_prefs';
@@ -16,6 +18,7 @@ const DEFAULT_PREFS: UnitPreferences = {
   temp: 'C',
   weight: 'kg',
   volume: 'ml',
+  length: 'cm',
 };
 
 const isTempUnit = (value: unknown): value is TempUnit => value === 'C' || value === 'F';
@@ -23,6 +26,7 @@ const isTempUnit = (value: unknown): value is TempUnit => value === 'C' || value
 const isWeightUnit = (value: unknown): value is WeightUnit => value === 'kg' || value === 'lb';
 
 const isVolumeUnit = (value: unknown): value is VolumeUnit => value === 'ml' || value === 'oz';
+const isLengthUnit = (value: unknown): value is LengthUnit => value === 'cm' || value === 'in';
 
 const isUnitPreferences = (value: unknown): value is UnitPreferences => {
   if (!value || typeof value !== 'object') {
@@ -30,7 +34,12 @@ const isUnitPreferences = (value: unknown): value is UnitPreferences => {
   }
 
   const candidate = value as Record<string, unknown>;
-  return isTempUnit(candidate.temp) && isWeightUnit(candidate.weight) && isVolumeUnit(candidate.volume);
+  return (
+    isTempUnit(candidate.temp) &&
+    isWeightUnit(candidate.weight) &&
+    isVolumeUnit(candidate.volume) &&
+    isLengthUnit(candidate.length)
+  );
 };
 
 const readStoredPrefs = (): UnitPreferences => {

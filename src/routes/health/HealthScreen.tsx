@@ -34,7 +34,7 @@ export const HealthScreen = () => {
         weight: value ? Number(value) : null,
         weightUnit: prefs.weight,
         length: lengthValue ? Number(lengthValue) : null,
-        lengthUnit: 'cm',
+        lengthUnit: prefs.length,
         notes: null,
       }).then(() => navigate('/'));
     }
@@ -131,8 +131,8 @@ export const HealthScreen = () => {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Height (cm)</label>
-                <input type="number" step="0.1" className="form-control" placeholder="51.0" value={lengthValue} onChange={(event) => setLengthValue(event.target.value)} />
+                <label className="form-label">Height ({prefs.length})</label>
+                <input type="number" step="0.1" className="form-control" placeholder={prefs.length === 'cm' ? '51.0' : '20.1'} value={lengthValue} onChange={(event) => setLengthValue(event.target.value)} />
               </div>
             </>
           )}
@@ -208,7 +208,7 @@ export const HealthScreen = () => {
             <div>
               <div className="text-xs text-muted">Last Length</div>
               <div className="text-success font-bold">
-                {doctorSummary.growthMeasurements[0]?.length ?? '--'} {doctorSummary.growthMeasurements[0]?.lengthUnit ?? 'cm'}
+                {doctorSummary.growthMeasurements[0]?.length ?? '--'} {doctorSummary.growthMeasurements[0]?.lengthUnit ?? prefs.length}
               </div>
             </div>
             <ChevronRight size={20} className="text-muted" />
