@@ -42,7 +42,6 @@ export const FeedScreen = () => {
       bottleAmount: feedType === 'bottle' ? amount : null,
       bottleUnit: feedType === 'bottle' ? (prefs.volume as 'ml' | 'oz') : null,
     }).then(() => {
-      void reset();
       navigate('/');
     });
   };

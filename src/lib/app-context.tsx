@@ -1,4 +1,4 @@
-import { startTransition, useCallback, useEffect, useState } from 'react';
+import { startTransition, useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { authRepository, appRepository, formatSyncStatus, type PendingMutation } from './supabase/repository';
@@ -157,12 +157,38 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
   const [doctorSummary, setDoctorSummary] = useState<DoctorSummary>(() => emptyDoctorSummary('48h'));
   const [timeline, setTimeline] = useState<MedicalTimelineEvent[]>([]);
   const [syncStatus, setSyncStatus] = useState(() => defaultSyncStatus);
+  const sessionRef = useRef<Session | null>(null);
+  const isOnlineRef = useRef(isOnline);
+  const householdRef = useRef<Household | null>(null);
+  const babyRef = useRef<BabyProfile | null>(null);
+  const doctorWindowRef = useRef<DoctorSummary['windowLabel']>(doctorWindowState);
+  const isSyncingRef = useRef(false);
+
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
+
+  useEffect(() => {
+    isOnlineRef.current = isOnline;
+  }, [isOnline]);
+
+  useEffect(() => {
+    householdRef.current = household;
+  }, [household]);
+
+  useEffect(() => {
+    babyRef.current = baby;
+  }, [baby]);
+
+  useEffect(() => {
+    doctorWindowRef.current = doctorWindowState;
+  }, [doctorWindowState]);
 
   const refreshSyncLabel = useCallback(async (hasError = false): Promise<void> => {
     const pendingCount = await countPendingMutations();
     const lastSyncedAt = await getSyncMeta(lastSyncedMetaKey);
-    setSyncStatus(formatSyncStatus(pendingCount, isOnline, lastSyncedAt, hasError));
-  }, [isOnline]);
+    setSyncStatus(formatSyncStatus(pendingCount, isOnlineRef.current, lastSyncedAt, hasError));
+  }, []);
 
   const persistBootstrap = async (nextBootstrap: AppBootstrap): Promise<void> => {
     await setSyncMeta(bootstrapMetaKey, JSON.stringify(nextBootstrap));
@@ -179,7 +205,7 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
     if (!nextBaby || !nextHousehold) {
       setHomeSummary(emptyHomeSummary);
       setReportsSummary(emptyReportsSummary);
-      setDoctorSummary(emptyDoctorSummary(doctorWindowState));
+      setDoctorSummary(emptyDoctorSummary(doctorWindowRef.current));
       setTimeline([]);
       return;
     }
@@ -207,11 +233,11 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
           }
     );
     setReportsSummary(cachedReports ?? emptyReportsSummary);
-    setDoctorSummary(cachedDoctor ?? emptyDoctorSummary(doctorWindowState));
+    setDoctorSummary(cachedDoctor ?? emptyDoctorSummary(doctorWindowRef.current));
     setTimeline(cachedTimeline);
-  }, [doctorWindowState]);
+  }, []);
 
-  const refreshRemoteData = async (targetBaby: BabyProfile, targetHousehold: Household, windowLabel: DoctorSummary['windowLabel']): Promise<void> => {
+  const refreshRemoteData = useCallback(async (targetBaby: BabyProfile, targetHousehold: Household, windowLabel: DoctorSummary['windowLabel']): Promise<void> => {
     const [nextHome, nextReports, nextDoctor, nextTimeline] = await Promise.all([
       appRepository.getHomeSummary(targetBaby.id),
       appRepository.getReportsSummary(targetBaby.id),
@@ -233,7 +259,7 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
       setDoctorSummary(nextDoctor);
       setTimeline(nextTimeline);
     });
-  };
+  }, []);
 
   const executeMutation = async (item: QueueItem): Promise<void> => {
     switch (item.operation) {
@@ -294,23 +320,32 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
     }
   };
 
-  const replayAndRefresh = useCallback(async (targetBaby = baby, targetHousehold = household, windowLabel = doctorWindowState): Promise<void> => {
-    if (!isOnline || !session) {
+  const replayAndRefresh = useCallback(async (
+    targetBaby = babyRef.current,
+    targetHousehold = householdRef.current,
+    windowLabel = doctorWindowRef.current
+  ): Promise<void> => {
+    if (!isOnlineRef.current || !sessionRef.current || isSyncingRef.current) {
       await refreshSyncLabel();
       return;
     }
 
-    const replayResult = await replayPendingMutations(executeMutation);
-    if (targetBaby && targetHousehold) {
-      await refreshRemoteData(targetBaby, targetHousehold, windowLabel);
+    isSyncingRef.current = true;
+    try {
+      const replayResult = await replayPendingMutations(executeMutation);
+      if (targetBaby && targetHousehold) {
+        await refreshRemoteData(targetBaby, targetHousehold, windowLabel);
+      }
+      await refreshSyncLabel(replayResult.didStopOnFatal);
+      if (replayResult.didStopOnFatal && replayResult.lastError) {
+        setActionError(replayResult.lastError);
+      }
+    } finally {
+      isSyncingRef.current = false;
     }
-    await refreshSyncLabel(replayResult.didStopOnFatal);
-    if (replayResult.didStopOnFatal && replayResult.lastError) {
-      setActionError(replayResult.lastError);
-    }
-  }, [baby, doctorWindowState, household, isOnline, refreshSyncLabel, session]);
+  }, [refreshRemoteData, refreshSyncLabel]);
 
-  const loadSessionState = useCallback(async (nextSession: Session | null): Promise<void> => {
+  const loadSessionState = useEffectEvent(async (nextSession: Session | null): Promise<void> => {
     setSession(nextSession);
 
     if (!nextSession) {
@@ -321,7 +356,7 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
       setBaby(null);
       setHomeSummary(emptyHomeSummary);
       setReportsSummary(emptyReportsSummary);
-      setDoctorSummary(emptyDoctorSummary(doctorWindowState));
+      setDoctorSummary(emptyDoctorSummary(doctorWindowRef.current));
       setTimeline([]);
       await refreshSyncLabel();
       return;
@@ -341,7 +376,7 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
       await persistBootstrap(nextBootstrap);
       await hydrateCachedData(nextBootstrap.household, nextBootstrap.baby);
       if (nextBootstrap.household && nextBootstrap.baby) {
-        await replayAndRefresh(nextBootstrap.baby, nextBootstrap.household, doctorWindowState);
+        await replayAndRefresh(nextBootstrap.baby, nextBootstrap.household, doctorWindowRef.current);
       } else {
         await refreshSyncLabel();
       }
@@ -350,7 +385,7 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
         setActionError(error instanceof Error ? error.message : 'Unable to load app data');
       }
     }
-  }, [doctorWindowState, hydrateCachedData, refreshSyncLabel, replayAndRefresh]);
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -389,18 +424,19 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
       isMounted = false;
       unsubscribe?.();
     };
-  }, [loadSessionState]);
+  }, []);
+
+  const handleOnline = useEffectEvent(() => {
+    setIsOnline(true);
+    void replayAndRefresh();
+  });
+
+  const handleOffline = useEffectEvent(() => {
+    setIsOnline(false);
+    void refreshSyncLabel();
+  });
 
   useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      void replayAndRefresh();
-    };
-    const handleOffline = () => {
-      setIsOnline(false);
-      void refreshSyncLabel();
-    };
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
@@ -408,7 +444,7 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [doctorWindowState, household?.id, replayAndRefresh, refreshSyncLabel, session, baby?.id]);
+  }, []);
 
   useEffect(() => {
     void refreshSyncLabel();
