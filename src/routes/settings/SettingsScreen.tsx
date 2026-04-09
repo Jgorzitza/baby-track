@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { User, Users, Bell, Shield, LogOut, ChevronRight, Settings2, Download, RefreshCcw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useUnitPrefs } from '../../lib/useUnitPrefs';
 import { usePWAInstall } from '../../lib/usePWAInstall';
 import { useAppContext } from '../../lib/app-hooks';
 
 export const SettingsScreen = () => {
+  const navigate = useNavigate();
   const { prefs, updatePref } = useUnitPrefs();
   const { isInstallable, install, installState, installError, showManualInstallHint, manualInstallMessage } = usePWAInstall();
   const { profile, household, members, signOut, syncStatus, refreshData } = useAppContext();
@@ -106,7 +108,12 @@ export const SettingsScreen = () => {
       <section style={{ marginTop: '1.5rem' }}>
         <h4>Household</h4>
         <div className="card">
-          <div className="flex-row space-between" style={{ paddingBottom: '0.75rem', borderBottom: '1px solid var(--border)' }}>
+          <button
+            type="button"
+            className="flex-row space-between"
+            style={{ paddingBottom: '0.75rem', borderBottom: '1px solid var(--border)', width: '100%', background: 'none', borderLeft: 'none', borderRight: 'none', borderTop: 'none', paddingInline: 0 }}
+            onClick={() => navigate('/household/manage')}
+          >
             <div className="flex-row">
               <Users size={20} className="text-muted" />
               <span>{household?.name ?? 'Manage Household'}</span>
@@ -115,7 +122,7 @@ export const SettingsScreen = () => {
               <span className="text-sm text-muted">{members.length} Member{members.length === 1 ? '' : 's'}</span>
               <ChevronRight size={20} className="text-muted" />
             </div>
-          </div>
+          </button>
           <div className="flex-row space-between" style={{ paddingTop: '0.75rem' }}>
             <div className="flex-row">
               <Shield size={20} className="text-muted" />

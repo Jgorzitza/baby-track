@@ -196,6 +196,8 @@ export interface DoctorQuestion {
   babyId: string;
   doctorAppointmentId: string;
   question: string;
+  answeredAt: string | null;
+  answerNotes: string | null;
   createdAt: string;
   createdBy: string;
 }
@@ -231,6 +233,8 @@ export interface ReportsSummary {
   latestSymptomSummary: string | null;
   timeline: MedicalTimelineEvent[];
 }
+
+export type ReportsWindowDays = 7 | 14 | 30;
 
 export interface DoctorSummary {
   windowLabel: '24h' | '48h' | '7d';
@@ -297,6 +301,7 @@ export type MutationOperation =
   | 'upsert_doctor_appointment'
   | 'delete_doctor_appointment'
   | 'add_doctor_question'
+  | 'answer_doctor_question'
   | 'delete_doctor_question'
   | 'add_doctor_note';
 

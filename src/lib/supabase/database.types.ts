@@ -216,6 +216,8 @@ export type Database = {
       }
       doctor_questions: {
         Row: {
+          answer_notes: string | null
+          answered_at: string | null
           baby_id: string
           client_created_at: string
           created_at: string
@@ -227,6 +229,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          answer_notes?: string | null
+          answered_at?: string | null
           baby_id: string
           client_created_at: string
           created_at?: string
@@ -238,6 +242,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          answer_notes?: string | null
+          answered_at?: string | null
           baby_id?: string
           client_created_at?: string
           created_at?: string
@@ -883,6 +889,15 @@ export type Database = {
           p_client_created_at: string
           p_household_id: string
           p_question: string
+          p_question_id: string
+        }
+        Returns: Json
+      }
+      app_answer_doctor_question: {
+        Args: {
+          p_answer_notes: string
+          p_answered: boolean
+          p_household_id: string
           p_question_id: string
         }
         Returns: Json

@@ -267,6 +267,8 @@ export const mapDoctorQuestion = (value: Json): DoctorQuestion => {
     babyId: asString(row.baby_id),
     doctorAppointmentId: asString(row.doctor_appointment_id),
     question: asString(row.question),
+    answeredAt: asNullableString(row.answered_at),
+    answerNotes: asNullableString(row.answer_notes),
     createdAt: asString(row.created_at),
     createdBy: asString(row.created_by),
   };

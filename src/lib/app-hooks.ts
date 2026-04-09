@@ -47,8 +47,8 @@ export const useTimeline = () => {
 };
 
 export const useReportsSummary = () => {
-  const { reportsSummary, refreshData } = useAppContext();
-  return { reportsSummary, refreshData };
+  const { reportsSummary, reportsWindowDays, setReportsWindowDays, refreshData } = useAppContext();
+  return { reportsSummary, reportsWindowDays, setReportsWindowDays, refreshData };
 };
 
 export const useDoctorSummary = () => {
@@ -61,6 +61,7 @@ export const useDoctorSummary = () => {
     saveDoctorAppointment,
     deleteDoctorAppointment,
     addDoctorQuestion,
+    answerDoctorQuestion,
     deleteDoctorQuestion,
     addDoctorNote,
   } = useAppContext();
@@ -74,6 +75,7 @@ export const useDoctorSummary = () => {
     saveDoctorAppointment,
     deleteDoctorAppointment,
     addDoctorQuestion,
+    answerDoctorQuestion,
     deleteDoctorQuestion,
     addDoctorNote,
   };

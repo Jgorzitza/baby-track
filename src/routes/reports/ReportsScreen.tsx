@@ -5,7 +5,7 @@ import { formatElapsedClock } from '../../lib/time';
 
 export const ReportsScreen = () => {
   const navigate = useNavigate();
-  const { reportsSummary } = useReportsSummary();
+  const { reportsSummary, reportsWindowDays, setReportsWindowDays } = useReportsSummary();
 
   return (
     <div className="reports-screen">
@@ -17,12 +17,24 @@ export const ReportsScreen = () => {
             <p className="text-muted text-sm">{reportsSummary.windowLabel}</p>
           </div>
         </div>
+        <div className="flex-row" style={{ gap: '0.5rem', marginTop: '1rem' }}>
+          {([7, 14, 30] as const).map((windowDays) => (
+            <button
+              key={windowDays}
+              className={`btn text-xs ${reportsWindowDays === windowDays ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ minHeight: 36, padding: '0 0.875rem' }}
+              onClick={() => void setReportsWindowDays(windowDays)}
+            >
+              {windowDays} days
+            </button>
+          ))}
+        </div>
       </div>
 
       <section>
         <h4>Activity Summaries</h4>
         <div className="flex-col" style={{ gap: '0.75rem' }}>
-          <div className="card" style={{ marginBottom: 0 }}>
+          <button className="card" style={{ marginBottom: 0, textAlign: 'left', border: '1px solid var(--border)', width: '100%' }} onClick={() => navigate('/sleep')}>
             <div className="flex-row space-between">
               <div className="flex-row">
                 <div className="btn btn-secondary btn-icon" style={{ backgroundColor: '#eef2ff', width: 40, height: 40 }}>
@@ -35,9 +47,9 @@ export const ReportsScreen = () => {
               </div>
               <ChevronRight size={18} className="text-muted" />
             </div>
-          </div>
+          </button>
 
-          <div className="card" style={{ marginBottom: 0 }}>
+          <button className="card" style={{ marginBottom: 0, textAlign: 'left', border: '1px solid var(--border)', width: '100%' }} onClick={() => navigate('/feed')}>
             <div className="flex-row space-between">
               <div className="flex-row">
                 <div className="btn btn-secondary btn-icon" style={{ backgroundColor: '#fff1f2', width: 40, height: 40 }}>
@@ -50,9 +62,9 @@ export const ReportsScreen = () => {
               </div>
               <ChevronRight size={18} className="text-muted" />
             </div>
-          </div>
+          </button>
 
-          <div className="card" style={{ marginBottom: 0 }}>
+          <button className="card" style={{ marginBottom: 0, textAlign: 'left', border: '1px solid var(--border)', width: '100%' }} onClick={() => navigate('/diaper')}>
             <div className="flex-row space-between">
               <div className="flex-row">
                 <div className="btn btn-secondary btn-icon" style={{ backgroundColor: '#f0fdf4', width: 40, height: 40 }}>
@@ -65,7 +77,7 @@ export const ReportsScreen = () => {
               </div>
               <ChevronRight size={18} className="text-muted" />
             </div>
-          </div>
+          </button>
         </div>
       </section>
 

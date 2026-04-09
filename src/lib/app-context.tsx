@@ -50,6 +50,7 @@ import type {
   SleepSession,
 } from './types';
 import { AppContext, type AppContextValue } from './app-context.shared';
+import { getSupabaseClient } from './supabase/client';
 
 const emptyHomeSummary: HomeSummary = {
   todaySleepSeconds: 0,
@@ -168,6 +169,7 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
   const [baby, setBaby] = useState<BabyProfile | null>(null);
   const [homeSummary, setHomeSummary] = useState<HomeSummary>(emptyHomeSummary);
   const [reportsSummary, setReportsSummary] = useState<ReportsSummary>(emptyReportsSummary);
+  const [reportsWindowDaysState, setReportsWindowDaysState] = useState<7 | 14 | 30>(7);
   const [doctorWindowState, setDoctorWindowState] = useState<DoctorSummary['windowLabel']>('48h');
   const [doctorSummary, setDoctorSummary] = useState<DoctorSummary>(() => emptyDoctorSummary('48h'));
   const [selectedDoctorAppointmentId, setSelectedDoctorAppointmentId] = useState<string | null>(null);
@@ -177,6 +179,7 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
   const isOnlineRef = useRef(isOnline);
   const householdRef = useRef<Household | null>(null);
   const babyRef = useRef<BabyProfile | null>(null);
+  const reportsWindowDaysRef = useRef<7 | 14 | 30>(reportsWindowDaysState);
   const doctorWindowRef = useRef<DoctorSummary['windowLabel']>(doctorWindowState);
   const selectedDoctorAppointmentIdRef = useRef<string | null>(selectedDoctorAppointmentId);
   const isSyncingRef = useRef(false);
@@ -196,6 +199,10 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
   useEffect(() => {
     babyRef.current = baby;
   }, [baby]);
+
+  useEffect(() => {
+    reportsWindowDaysRef.current = reportsWindowDaysState;
+  }, [reportsWindowDaysState]);
 
   useEffect(() => {
     doctorWindowRef.current = doctorWindowState;
@@ -260,10 +267,15 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
     setTimeline(cachedTimeline);
   }, []);
 
-  const refreshRemoteData = useCallback(async (targetBaby: BabyProfile, targetHousehold: Household, windowLabel: DoctorSummary['windowLabel']): Promise<void> => {
+  const refreshRemoteData = useCallback(async (
+    targetBaby: BabyProfile,
+    targetHousehold: Household,
+    windowLabel: DoctorSummary['windowLabel'],
+    windowDays = reportsWindowDaysRef.current
+  ): Promise<void> => {
     const [nextHome, nextReports, nextDoctorBase, nextTimeline, cachedSleep, cachedFeed, appointments] = await Promise.all([
       appRepository.getHomeSummary(targetBaby.id),
-      appRepository.getReportsSummary(targetBaby.id),
+      appRepository.getReportsSummary(targetBaby.id, windowDays),
       appRepository.getDoctorSummary(targetBaby.id, windowLabel),
       appRepository.getTimeline(targetBaby.id),
       getActiveSleepCache(targetBaby.id),
@@ -362,6 +374,9 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
         return;
       case 'add_doctor_question':
         await appRepository.addDoctorQuestion(item.payload as Parameters<typeof appRepository.addDoctorQuestion>[0]);
+        return;
+      case 'answer_doctor_question':
+        await appRepository.answerDoctorQuestion(item.payload as Parameters<typeof appRepository.answerDoctorQuestion>[0]);
         return;
       case 'delete_doctor_question':
         await appRepository.deleteDoctorQuestion(item.payload as Parameters<typeof appRepository.deleteDoctorQuestion>[0]);
@@ -491,15 +506,67 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
     void refreshSyncLabel();
   });
 
+  const handleWindowFocus = useEffectEvent(() => {
+    if (babyRef.current && householdRef.current && sessionRef.current) {
+      void replayAndRefresh(babyRef.current, householdRef.current, doctorWindowRef.current);
+    }
+  });
+
   useEffect(() => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('focus', handleWindowFocus);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('focus', handleWindowFocus);
     };
   }, []);
+
+  useEffect(() => {
+    const client = getSupabaseClient();
+    if (!client || !session || !household || !baby) {
+      return undefined;
+    }
+
+    const refreshBootstrap = () => {
+      void loadSessionState(sessionRef.current);
+    };
+    const refreshSharedData = () => {
+      void replayAndRefresh(babyRef.current, householdRef.current, doctorWindowRef.current);
+    };
+
+    const bootstrapChannel = client
+      .channel(`bootstrap:${household.id}:${baby.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'babies', filter: `id=eq.${baby.id}` }, refreshBootstrap)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'households', filter: `id=eq.${household.id}` }, refreshBootstrap)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'household_members', filter: `household_id=eq.${household.id}` },
+        refreshBootstrap
+      )
+      .subscribe();
+
+    const dataChannel = client
+      .channel(`shared-data:${baby.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sleep_sessions', filter: `baby_id=eq.${baby.id}` }, refreshSharedData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'feeding_sessions', filter: `baby_id=eq.${baby.id}` }, refreshSharedData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'feeding_segments', filter: `baby_id=eq.${baby.id}` }, refreshSharedData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'diaper_events', filter: `baby_id=eq.${baby.id}` }, refreshSharedData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'health_events', filter: `baby_id=eq.${baby.id}` }, refreshSharedData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'symptom_events', filter: `baby_id=eq.${baby.id}` }, refreshSharedData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'growth_measurements', filter: `baby_id=eq.${baby.id}` }, refreshSharedData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'doctor_appointments', filter: `baby_id=eq.${baby.id}` }, refreshSharedData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'doctor_questions', filter: `baby_id=eq.${baby.id}` }, refreshSharedData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'medical_timeline_events', filter: `baby_id=eq.${baby.id}` }, refreshSharedData)
+      .subscribe();
+
+    return () => {
+      void client.removeChannel(bootstrapChannel);
+      void client.removeChannel(dataChannel);
+    };
+  }, [session, household, baby, replayAndRefresh]);
 
   useEffect(() => {
     void refreshSyncLabel();
@@ -1437,6 +1504,8 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
         babyId: base.baby.id,
         doctorAppointmentId: appointmentId,
         question,
+        answeredAt: null,
+        answerNotes: null,
         createdAt: now,
         createdBy: base.profile.id,
       };
@@ -1472,6 +1541,49 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
           clientCreatedAt: now,
         },
         createdAt: now,
+        attemptCount: 0,
+        lastError: null,
+        nextRetryAt: null,
+      });
+    });
+  };
+
+  const answerDoctorQuestion = async (input: {
+    questionId: string;
+    answered: boolean;
+    answerNotes: string | null;
+  }): Promise<void> => {
+    await withMutation(async () => {
+      const base = requireBootstrap();
+      const answeredAt = input.answered ? getNowIso() : null;
+      startTransition(() =>
+        setDoctorSummary((previous) => ({
+          ...previous,
+          questions: previous.questions.map((question) =>
+            question.id === input.questionId
+              ? {
+                  ...question,
+                  answeredAt,
+                  answerNotes: input.answerNotes,
+                }
+              : question
+          ),
+        }))
+      );
+      await queueAndMaybeReplay({
+        id: createClientId(),
+        entityType: 'doctor_question',
+        entityId: input.questionId,
+        operation: 'answer_doctor_question',
+        householdId: base.household.id,
+        babyId: base.baby.id,
+        payload: {
+          questionId: input.questionId,
+          householdId: base.household.id,
+          answered: input.answered,
+          answerNotes: input.answerNotes,
+        },
+        createdAt: getNowIso(),
         attemptCount: 0,
         lastError: null,
         nextRetryAt: null,
@@ -1605,6 +1717,22 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
     }
   };
 
+  const setReportsWindowDays = async (windowDays: 7 | 14 | 30): Promise<void> => {
+    setReportsWindowDaysState(windowDays);
+    if (baby && household && session && isOnline) {
+      await withMutation(async () => {
+        const nextReports = await appRepository.getReportsSummary(baby.id, windowDays);
+        await cacheReportsSummary(household.id, baby.id, nextReports);
+        setReportsSummary(nextReports);
+      });
+    } else {
+      setReportsSummary((previous) => ({
+        ...previous,
+        windowLabel: `${windowDays} days`,
+      }));
+    }
+  };
+
   const refreshData = async (): Promise<void> => {
     await withMutation(async () => {
       if (baby && household) {
@@ -1630,6 +1758,7 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
     doctorSummary,
     timeline,
     syncStatus,
+    reportsWindowDays: reportsWindowDaysState,
     doctorWindow: doctorWindowState,
     selectedDoctorAppointmentId,
     signIn,
@@ -1655,9 +1784,11 @@ export const AppProvider = ({ children }: PropsWithChildren) => {
     saveDoctorAppointment,
     deleteDoctorAppointment,
     addDoctorQuestion,
+    answerDoctorQuestion,
     deleteDoctorQuestion,
     addDoctorNote,
     setSelectedDoctorAppointment,
+    setReportsWindowDays,
     setDoctorWindow,
     refreshData,
   };

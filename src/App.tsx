@@ -334,6 +334,14 @@ const AppRoutes = () => {
           }
         />
         <Route
+          path="/household/manage"
+          element={
+            <SetupGate>
+              <HouseholdScreen />
+            </SetupGate>
+          }
+        />
+        <Route
           path="/timeline"
           element={
             <SetupGate>

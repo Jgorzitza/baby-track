@@ -1,6 +1,6 @@
 import { createContext } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import type { AppConfigError, BabyProfile, DiaperEvent, DoctorAppointment, DoctorSummary, FeedOutcome, FeedType, HomeSummary, Household, HouseholdMember, MedicalTimelineEvent, ParentProfile, ReportsSummary, SyncStatus } from './types';
+import type { AppConfigError, BabyProfile, DiaperEvent, DoctorAppointment, DoctorSummary, FeedOutcome, FeedType, HomeSummary, Household, HouseholdMember, MedicalTimelineEvent, ParentProfile, ReportsSummary, ReportsWindowDays, SyncStatus } from './types';
 
 type AuthStatus = 'loading' | 'signed_out' | 'signed_in';
 
@@ -21,6 +21,7 @@ export interface AppContextValue {
   doctorSummary: DoctorSummary;
   timeline: MedicalTimelineEvent[];
   syncStatus: SyncStatus;
+  reportsWindowDays: ReportsWindowDays;
   doctorWindow: DoctorSummary['windowLabel'];
   selectedDoctorAppointmentId: string | null;
   signIn: (email: string, password: string) => Promise<void>;
@@ -82,9 +83,15 @@ export interface AppContextValue {
   }) => Promise<void>;
   deleteDoctorAppointment: (appointmentId: string) => Promise<void>;
   addDoctorQuestion: (question: string, appointmentId?: string) => Promise<void>;
+  answerDoctorQuestion: (input: {
+    questionId: string;
+    answered: boolean;
+    answerNotes: string | null;
+  }) => Promise<void>;
   deleteDoctorQuestion: (questionId: string) => Promise<void>;
   addDoctorNote: (note: string, appointmentId?: string) => Promise<void>;
   setSelectedDoctorAppointment: (appointmentId: string | null) => Promise<void>;
+  setReportsWindowDays: (windowDays: ReportsWindowDays) => Promise<void>;
   setDoctorWindow: (windowLabel: DoctorSummary['windowLabel']) => Promise<void>;
   refreshData: () => Promise<void>;
 }

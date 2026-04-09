@@ -540,6 +540,23 @@ export const appRepository = {
       }
     );
   },
+  async answerDoctorQuestion(payload: {
+    questionId: string;
+    householdId: string;
+    answerNotes: string | null;
+    answered: boolean;
+  }): Promise<DoctorQuestion> {
+    return unwrapRpc(
+      'app_answer_doctor_question',
+      {
+        p_question_id: payload.questionId,
+        p_household_id: payload.householdId,
+        p_answered: payload.answered,
+        p_answer_notes: payload.answerNotes,
+      },
+      mapDoctorQuestion
+    );
+  },
   async deleteDoctorQuestion(payload: { questionId: string; householdId: string }): Promise<void> {
     await unwrapVoidRpc('app_delete_doctor_question', {
       p_question_id: payload.questionId,
