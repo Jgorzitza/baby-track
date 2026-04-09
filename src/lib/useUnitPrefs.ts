@@ -18,11 +18,37 @@ const DEFAULT_PREFS: UnitPreferences = {
   volume: 'ml',
 };
 
+const isTempUnit = (value: unknown): value is TempUnit => value === 'C' || value === 'F';
+
+const isWeightUnit = (value: unknown): value is WeightUnit => value === 'kg' || value === 'lb';
+
+const isVolumeUnit = (value: unknown): value is VolumeUnit => value === 'ml' || value === 'oz';
+
+const isUnitPreferences = (value: unknown): value is UnitPreferences => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return isTempUnit(candidate.temp) && isWeightUnit(candidate.weight) && isVolumeUnit(candidate.volume);
+};
+
+const readStoredPrefs = (): UnitPreferences => {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) {
+    return DEFAULT_PREFS;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(saved);
+    return isUnitPreferences(parsed) ? parsed : DEFAULT_PREFS;
+  } catch {
+    return DEFAULT_PREFS;
+  }
+};
+
 export const useUnitPrefs = () => {
-  const [prefs, setPrefs] = useState<UnitPreferences>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : DEFAULT_PREFS;
-  });
+  const [prefs, setPrefs] = useState<UnitPreferences>(readStoredPrefs);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));

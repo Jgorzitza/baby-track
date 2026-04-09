@@ -1,24 +1,14 @@
 import { Play, Square, History, ChevronRight } from 'lucide-react';
 import { useSleepTimer } from '../../features/sleep/useSleepTimer';
 import { useNavigate } from 'react-router-dom';
-import { mockStore } from '../../lib/mockStore';
+import { useAppContext } from '../../lib/app-hooks';
+import { formatElapsedClock } from '../../lib/time';
 
 export const SleepScreen = () => {
   const navigate = useNavigate();
+  const { timeline, homeSummary } = useAppContext();
   const { isAsleep, startTime, elapsed, toggleSleep, formatElapsed } = useSleepTimer();
-
-  const handleToggle = () => {
-    if (isAsleep && startTime) {
-      // Ending a session - save to historical log
-      mockStore.addSleep({
-        type: 'sleep',
-        startTime: startTime.toISOString(),
-        endTime: new Date().toISOString(),
-        duration: elapsed
-      });
-    }
-    toggleSleep();
-  };
+  const lastSleep = timeline.find((event) => event.eventType === 'sleep');
 
   return (
     <div className="sleep-screen">
@@ -26,7 +16,7 @@ export const SleepScreen = () => {
         <div 
           className={`btn btn-icon ${isAsleep ? 'btn-primary' : 'btn-secondary'}`}
           style={{ width: 120, height: 120, margin: '0 auto 1.5rem auto' }}
-          onClick={handleToggle}
+          onClick={() => void toggleSleep()}
         >
           {isAsleep ? <Square size={48} /> : <Play size={48} />}
         </div>
@@ -42,7 +32,7 @@ export const SleepScreen = () => {
         )}
         
         {!isAsleep && (
-          <button className="btn btn-primary btn-block" style={{ marginTop: '1rem' }} onClick={handleToggle}>
+          <button className="btn btn-primary btn-block" style={{ marginTop: '1rem' }} onClick={() => void toggleSleep()}>
             Start Sleep Session
           </button>
         )}
@@ -58,8 +48,10 @@ export const SleepScreen = () => {
             <div className="flex-row">
               <History size={18} className="text-muted" />
               <div>
-                <div className="font-bold">4h 30m</div>
-                <div className="text-xs text-muted">12:30 AM - 5:00 AM</div>
+                <div className="font-bold">{lastSleep?.summary ?? 'No sleep logged yet'}</div>
+                <div className="text-xs text-muted">
+                  {lastSleep ? new Date(lastSleep.occurredAt).toLocaleString() : 'Start a sleep session to track history'}
+                </div>
               </div>
             </div>
             <ChevronRight size={20} className="text-muted" />
@@ -73,11 +65,11 @@ export const SleepScreen = () => {
           <div className="grid-2">
             <div>
               <div className="text-xs text-muted">Total Sleep</div>
-              <div className="font-bold">8h 20m</div>
+              <div className="font-bold">{formatElapsedClock(homeSummary.todaySleepSeconds)}</div>
             </div>
             <div>
-              <div className="text-xs text-muted">Day Sleep</div>
-              <div className="font-bold">2h 15m</div>
+              <div className="text-xs text-muted">Current Session</div>
+              <div className="font-bold">{isAsleep ? formatElapsed(elapsed) : 'None'}</div>
             </div>
           </div>
         </div>

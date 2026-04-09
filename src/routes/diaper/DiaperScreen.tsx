@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, History, ChevronRight, Droplets, PenLine, Pipette } from 'lucide-react';
 import { DiaperType, StoolConsistency } from '../../lib/types';
-import { mockStore } from '../../lib/mockStore';
+import { useAppContext } from '../../lib/app-hooks';
 
 export const DiaperScreen = () => {
   const navigate = useNavigate();
+  const { timeline, logDiaper } = useAppContext();
   const [diaperType, setDiaperType] = useState<DiaperType>('wet');
   const [stoolConsistency, setStoolConsistency] = useState<StoolConsistency | ''>('');
   const [stoolColor, setStoolColor] = useState('');
@@ -24,18 +25,24 @@ export const DiaperScreen = () => {
   ];
 
   const handleSave = () => {
-    mockStore.addDiaper({
-      type: 'diaper',
+    void logDiaper({
       diaperType,
-      stoolColor: stoolColor || undefined,
-      stoolConsistency: stoolConsistency || undefined,
-      urineColor: urineNote || undefined,
-      notes: (details.mucus || details.blood) 
-        ? `Details: ${details.mucus ? 'Mucus' : ''}${details.mucus && details.blood ? ', ' : ''}${details.blood ? 'Blood' : ''}`
-        : undefined
-    });
-    navigate('/');
+      stoolColor: stoolColor || null,
+      stoolConsistency: stoolConsistency || null,
+      urineNote: urineNote || null,
+      mucus: details.mucus,
+      blood: details.blood,
+      notes:
+        details.mucus || details.blood
+          ? `Details: ${details.mucus ? 'Mucus' : ''}${details.mucus && details.blood ? ', ' : ''}${details.blood ? 'Blood' : ''}`
+          : null,
+    }).then(() => navigate('/'));
   };
+
+  const diaperTimeline = timeline.filter((event) => event.eventType === 'diaper');
+  const lastDiaper = diaperTimeline[0];
+  const wetCount = diaperTimeline.filter((event) => event.title.toLowerCase().includes('wet') || event.title.toLowerCase().includes('both')).length;
+  const dirtyCount = diaperTimeline.filter((event) => event.title.toLowerCase().includes('dirty') || event.title.toLowerCase().includes('both')).length;
 
   return (
     <div className="diaper-screen">
@@ -154,11 +161,11 @@ export const DiaperScreen = () => {
         <div className="grid-2">
           <div className="card text-center">
             <div className="text-xs text-muted">Wet</div>
-            <div className="font-bold" style={{ fontSize: '1.5rem' }}>4</div>
+            <div className="font-bold" style={{ fontSize: '1.5rem' }}>{wetCount}</div>
           </div>
           <div className="card text-center">
             <div className="text-xs text-muted">Dirty</div>
-            <div className="font-bold" style={{ fontSize: '1.5rem' }}>2</div>
+            <div className="font-bold" style={{ fontSize: '1.5rem' }}>{dirtyCount}</div>
           </div>
         </div>
       </section>
@@ -170,8 +177,8 @@ export const DiaperScreen = () => {
             <div className="flex-row">
               <History size={18} className="text-muted" />
               <div>
-                <div className="font-bold">Wet Diaper</div>
-                <div className="text-xs text-muted">9:15 AM (2h 30m ago)</div>
+                <div className="font-bold">{lastDiaper?.title ?? 'No diaper logged yet'}</div>
+                <div className="text-xs text-muted">{lastDiaper ? new Date(lastDiaper.occurredAt).toLocaleString() : 'Log a diaper to populate history'}</div>
               </div>
             </div>
             <ChevronRight size={20} className="text-muted" />

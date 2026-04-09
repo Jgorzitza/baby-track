@@ -1,9 +1,11 @@
 import { useLocation } from 'react-router-dom';
 import { ReactNode } from 'react';
 import { BottomNav } from './BottomNav';
+import { useSyncStatus } from '../../lib/offline/sync-context';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
+  const syncStatus = useSyncStatus();
   
   const getTitle = (pathname: string) => {
     switch (pathname) {
@@ -28,7 +30,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       <header className="top-bar">
         <div className="sync-status">
           <div className="sync-indicator"></div>
-          <span>Offline Ready</span>
+          <span>{syncStatus.message}</span>
         </div>
         <div>{getTitle(location.pathname)}</div>
       </header>

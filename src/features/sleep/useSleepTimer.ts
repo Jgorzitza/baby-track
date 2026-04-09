@@ -1,75 +1,39 @@
-import { useState, useEffect } from 'react';
-
-const STORAGE_KEY = 'bbtrack_active_sleep';
-
-interface SavedSleepState {
-  isAsleep: boolean;
-  startTime: string | null;
-}
-
-const getInitialSleepState = (): { isAsleep: boolean; startTime: Date | null; elapsed: number } => {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    try {
-      const state: SavedSleepState = JSON.parse(saved);
-      if (state.isAsleep && state.startTime) {
-        const start = new Date(state.startTime);
-        return {
-          isAsleep: true,
-          startTime: start,
-          elapsed: Math.floor((new Date().getTime() - start.getTime()) / 1000)
-        };
-      }
-    } catch {
-      // Fallback
-    }
-  }
-  return { isAsleep: false, startTime: null, elapsed: 0 };
-};
+import { useEffect, useState } from 'react';
+import { useActiveSleepSession } from '../../lib/app-hooks';
+import { diffSeconds, formatElapsedClock } from '../../lib/time';
 
 export const useSleepTimer = () => {
-  const [sleepState, setSleepState] = useState(getInitialSleepState);
-  const { isAsleep, startTime, elapsed } = sleepState;
-
-  // Save to localStorage
-  useEffect(() => {
-    const state: SavedSleepState = {
-      isAsleep,
-      startTime: startTime?.toISOString() || null,
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [isAsleep, startTime]);
+  const { activeSleepSession, startSleep, finishSleep } = useActiveSleepSession();
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (isAsleep && startTime) {
-      interval = setInterval(() => {
-        setSleepState(prev => ({
-          ...prev,
-          elapsed: Math.floor((new Date().getTime() - (prev.startTime?.getTime() || Date.now())) / 1000)
-        }));
-      }, 1000);
+    if (!activeSleepSession) {
+      return undefined;
     }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isAsleep, startTime]);
 
-  const toggleSleep = () => {
-    if (isAsleep) {
-      setSleepState({ isAsleep: false, startTime: null, elapsed: 0 });
-      localStorage.removeItem(STORAGE_KEY);
-    } else {
-      setSleepState({ isAsleep: true, startTime: new Date(), elapsed: 0 });
+    const interval = window.setInterval(() => {
+      setTick((value) => value + 1);
+    }, 1_000);
+
+    return () => window.clearInterval(interval);
+  }, [activeSleepSession]);
+
+  void tick;
+  const elapsed = activeSleepSession ? diffSeconds(activeSleepSession.startedAt) : 0;
+
+  const toggleSleep = async (): Promise<void> => {
+    if (activeSleepSession) {
+      await finishSleep();
+      return;
     }
+    await startSleep();
   };
 
-  const formatElapsed = (seconds: number) => {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${hrs > 0 ? hrs + 'h ' : ''}${mins}m ${secs}s`;
+  return {
+    isAsleep: Boolean(activeSleepSession),
+    startTime: activeSleepSession ? new Date(activeSleepSession.startedAt) : null,
+    elapsed,
+    toggleSleep,
+    formatElapsed: formatElapsedClock,
   };
-
-  return { isAsleep, startTime, elapsed, toggleSleep, formatElapsed };
 };

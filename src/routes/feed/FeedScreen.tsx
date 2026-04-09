@@ -4,11 +4,12 @@ import { useFeedingTimer } from '../../features/feed/useFeedingTimer';
 import { Droplets, RotateCcw, Check, ChevronRight, Undo2 } from 'lucide-react';
 import { FeedOutcome } from '../../lib/types';
 import { useUnitPrefs } from '../../lib/useUnitPrefs';
-import { mockStore } from '../../lib/mockStore';
+import { useAppContext } from '../../lib/app-hooks';
 
 export const FeedScreen = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { timeline, finishFeedSession } = useAppContext();
   const { activeSide, leftSeconds, rightSeconds, toggleSide, undo, reset, formatTime, totalSeconds, canUndo } = useFeedingTimer();
   const [outcome, setOutcome] = useState<FeedOutcome | ''>('');
   const [feedType, setFeedType] = useState<'breast' | 'bottle'>(() => {
@@ -31,20 +32,22 @@ export const FeedScreen = () => {
     if (feedType === 'breast' && totalSeconds === 0) return;
     if (feedType === 'bottle' && amount === 0) return;
 
-    mockStore.addFeed({
-      type: 'feed',
+    void finishFeedSession({
       feedType,
-      side: feedType === 'breast' ? (leftSeconds > 0 && rightSeconds > 0 ? 'both' : leftSeconds > 0 ? 'left' : 'right') : undefined,
-      durationLeft: feedType === 'breast' ? leftSeconds : undefined,
-      durationRight: feedType === 'breast' ? rightSeconds : undefined,
-      amount: feedType === 'bottle' ? amount : undefined,
-      unit: feedType === 'bottle' ? (prefs.volume as 'ml' | 'oz') : undefined,
-      outcome: outcome || 'good'
+      outcome: outcome || 'good',
+      latchIssue: outcome === 'latch_issue',
+      sleepyFeed: outcome === 'sleepy',
+      refusedFeed: outcome === 'refused',
+      spitUp: outcome === 'spit_up',
+      bottleAmount: feedType === 'bottle' ? amount : null,
+      bottleUnit: feedType === 'bottle' ? (prefs.volume as 'ml' | 'oz') : null,
+    }).then(() => {
+      void reset();
+      navigate('/');
     });
-
-    reset();
-    navigate('/');
   };
+
+  const recentFeed = timeline.find((event) => event.eventType === 'feed');
 
   return (
     <div className="feed-screen">
@@ -196,12 +199,12 @@ export const FeedScreen = () => {
           <div className="flex-row space-between text-sm">
             <div className="flex-row">
               <Droplets size={16} className="text-primary" />
-              <span>Breast - Both</span>
+              <span>{recentFeed?.title ?? 'No feed history yet'}</span>
             </div>
-            <span>1h 20m ago</span>
+            <span>{recentFeed ? new Date(recentFeed.occurredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</span>
           </div>
           <div className="text-muted text-xs" style={{ marginTop: '4px' }}>
-            L: 15m, R: 16m • Outcome: Good
+            {recentFeed?.summary ?? 'Finish a feed to populate recent history'}
           </div>
         </div>
       </section>

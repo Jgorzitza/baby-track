@@ -1,47 +1,27 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, Droplets, Baby, Thermometer, Pill, Stethoscope, Moon } from 'lucide-react';
 import { useFeedingTimer } from '../../features/feed/useFeedingTimer';
 import { useSleepTimer } from '../../features/sleep/useSleepTimer';
-import { useState, useEffect } from 'react';
-import { Skeleton } from '../../components/ui/Skeleton';
+import { useAppContext } from '../../lib/app-hooks';
+import { formatElapsedClock } from '../../lib/time';
 
 export const HomeScreen = () => {
   const navigate = useNavigate();
+  const { baby, homeSummary } = useAppContext();
   const { activeSide, formatTime: formatFeedTime, totalSeconds: feedSeconds } = useFeedingTimer();
   const { isAsleep, formatElapsed: formatSleepTime, elapsed: sleepSeconds } = useSleepTimer();
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Simulate initial load for skeleton demonstration
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (isLoading) {
-    return (
-      <div className="home-screen">
-        <Skeleton height={80} className="card" />
-        <section>
-          <Skeleton width="40%" height="1.25rem" style={{ marginBottom: '1rem' }} />
-          <div className="grid-2">
-            {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} height={64} />)}
-          </div>
-        </section>
-        <section style={{ marginTop: '1.5rem' }}>
-          <Skeleton width="50%" height="1.25rem" style={{ marginBottom: '1rem' }} />
-          <Skeleton height={64} />
-        </section>
-      </div>
-    );
-  }
+  const [now] = useState(() => Date.now());
 
   return (
     <div className="home-screen">
       <div className="card">
         <div className="flex-row space-between">
           <div>
-            <h3>Leo</h3>
-            <p className="text-muted text-sm">2 weeks, 3 days old</p>
+            <h3>{baby?.name ?? 'Baby'}</h3>
+            <p className="text-muted text-sm">
+              {baby?.birthDate ? `${Math.max(0, Math.floor((now - new Date(baby.birthDate).getTime()) / (1000 * 60 * 60 * 24)))} days old` : 'Profile setup needed'}
+            </p>
           </div>
           <div className="btn btn-secondary btn-icon" onClick={() => navigate('/baby')}>
             <Baby size={24} />
@@ -68,11 +48,11 @@ export const HomeScreen = () => {
             <Droplets size={20} />
             <span>Feed Bottle</span>
           </button>
-          <button className="btn btn-secondary flex-col" onClick={() => navigate('/health')}>
+          <button className="btn btn-secondary flex-col" onClick={() => navigate('/health', { state: { defaultType: 'temperature' } })}>
             <Thermometer size={20} />
             <span>Temp</span>
           </button>
-          <button className="btn btn-secondary flex-col" onClick={() => navigate('/health')}>
+          <button className="btn btn-secondary flex-col" onClick={() => navigate('/health', { state: { defaultType: 'medication' } })}>
             <Pill size={20} />
             <span>Medication</span>
           </button>
@@ -82,9 +62,9 @@ export const HomeScreen = () => {
       <section style={{ marginTop: '1.5rem' }}>
         <div className="flex-row space-between">
           <h4>Active Sessions</h4>
-          <span className="text-sm text-primary">View All</span>
+          <span className="text-sm text-primary">Live</span>
         </div>
-        
+
         <div className="flex-col" style={{ gap: '0.75rem' }}>
           {activeSide && (
             <div className="card active-session-indicator" style={{ borderLeft: '4px solid var(--primary)', marginBottom: 0 }} onClick={() => navigate('/feed')}>
@@ -123,15 +103,15 @@ export const HomeScreen = () => {
         <div className="grid-3">
           <div className="card text-center" style={{ padding: '0.75rem' }} onClick={() => navigate('/reports')}>
             <span className="text-muted text-xs block">Sleep</span>
-            <div className="font-bold">8h 20m</div>
+            <div className="font-bold">{formatElapsedClock(homeSummary.todaySleepSeconds)}</div>
           </div>
           <div className="card text-center" style={{ padding: '0.75rem' }} onClick={() => navigate('/reports')}>
             <span className="text-muted text-xs block">Feeds</span>
-            <div className="font-bold">6</div>
+            <div className="font-bold">{homeSummary.todayFeedCount}</div>
           </div>
           <div className="card text-center" style={{ padding: '0.75rem' }} onClick={() => navigate('/reports')}>
             <span className="text-muted text-xs block">Diapers</span>
-            <div className="font-bold">5</div>
+            <div className="font-bold">{homeSummary.todayDiaperCount}</div>
           </div>
         </div>
       </section>

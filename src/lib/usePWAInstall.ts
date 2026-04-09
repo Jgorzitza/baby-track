@@ -11,6 +11,8 @@ interface BeforeInstallPromptEvent extends Event {
 
 export const usePWAInstall = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installState, setInstallState] = useState<'idle' | 'prompting' | 'dismissed' | 'accepted' | 'error'>('idle');
+  const [installError, setInstallError] = useState<string | null>(null);
   const [isInstallable, setIsInstallable] = useState(() => {
     // Initial check: if already in standalone, it's not installable
     if (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) {
@@ -26,27 +28,55 @@ export const usePWAInstall = () => {
       // Stash the event so it can be triggered later.
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       setIsInstallable(true);
+      setInstallState('idle');
+      setInstallError(null);
+    };
+
+    const handleInstalled = () => {
+      setDeferredPrompt(null);
+      setIsInstallable(false);
+      setInstallState('accepted');
+      setInstallError(null);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', handleInstalled);
 
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', handleInstalled);
+    };
   }, []);
 
   const install = async () => {
-    if (!deferredPrompt) return;
+    if (!deferredPrompt) {
+      setInstallState('error');
+      setInstallError('Install prompt is not available right now. Try again from a supported mobile browser.');
+      return;
+    }
+
+    setInstallState('prompting');
+    setInstallError(null);
 
     // Show the install prompt
-    await deferredPrompt.prompt();
+    try {
+      await deferredPrompt.prompt();
 
-    // Wait for the user to respond to the prompt
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
+      // Wait for the user to respond to the prompt
+      const { outcome } = await deferredPrompt.userChoice;
       setDeferredPrompt(null);
       setIsInstallable(false);
+      setInstallState(outcome);
+      if (outcome === 'dismissed') {
+        setInstallError('Install was dismissed. You can try again when the browser offers the prompt.');
+      }
+    } catch {
+      setDeferredPrompt(null);
+      setIsInstallable(false);
+      setInstallState('error');
+      setInstallError('Unable to show the install prompt on this device.');
     }
   };
 
-  return { isInstallable, install };
+  return { isInstallable, install, installState, installError };
 };

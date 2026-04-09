@@ -3,28 +3,41 @@ import { useNavigate } from 'react-router-dom';
 import { Thermometer, Pill, Activity, LineChart, Check, ChevronRight, Calendar } from 'lucide-react';
 import { HealthType } from '../../lib/types';
 import { useUnitPrefs } from '../../lib/useUnitPrefs';
-import { mockStore } from '../../lib/mockStore';
+import { useAppContext } from '../../lib/app-hooks';
 
 export const HealthScreen = () => {
   const navigate = useNavigate();
+  const { doctorSummary, logGrowth, logMedication, logSymptom, logTemperature } = useAppContext();
   const [healthType, setHealthType] = useState<HealthType>('temperature');
   const [value, setValue] = useState<string>('');
   const [medName, setMedName] = useState<string>('');
   const [dosage, setDosage] = useState<string>('');
   const [symptom, setSymptom] = useState<string>('');
+  const [lengthValue, setLengthValue] = useState<string>('');
   const { prefs } = useUnitPrefs();
 
   const handleSave = () => {
-    mockStore.addHealth({
-      type: 'health',
-      healthType,
-      value: value ? Number(value) : undefined,
-      unit: healthType === 'temperature' ? prefs.temp : healthType === 'growth' ? prefs.weight : undefined,
-      medicationName: healthType === 'medication' ? medName : undefined,
-      dosage: healthType === 'medication' ? dosage : undefined,
-      symptomName: healthType === 'symptom' ? symptom : undefined,
-    });
-    navigate('/');
+    if (healthType === 'temperature' && value) {
+      void logTemperature({ value: Number(value), unit: prefs.temp, notes: null }).then(() => navigate('/'));
+      return;
+    }
+    if (healthType === 'medication' && medName && dosage) {
+      void logMedication({ medicationName: medName, dosage, notes: null }).then(() => navigate('/'));
+      return;
+    }
+    if (healthType === 'symptom' && symptom) {
+      void logSymptom({ symptom, notes: null }).then(() => navigate('/'));
+      return;
+    }
+    if (healthType === 'growth' && (value || lengthValue)) {
+      void logGrowth({
+        weight: value ? Number(value) : null,
+        weightUnit: prefs.weight,
+        length: lengthValue ? Number(lengthValue) : null,
+        lengthUnit: 'cm',
+        notes: null,
+      }).then(() => navigate('/'));
+    }
   };
 
   return (
@@ -119,7 +132,7 @@ export const HealthScreen = () => {
               </div>
               <div className="form-group">
                 <label className="form-label">Height (cm)</label>
-                <input type="number" step="0.1" className="form-control" placeholder="51.0" />
+                <input type="number" step="0.1" className="form-control" placeholder="51.0" value={lengthValue} onChange={(event) => setLengthValue(event.target.value)} />
               </div>
             </>
           )}
@@ -166,18 +179,18 @@ export const HealthScreen = () => {
           <div className="flex-row space-between text-sm">
             <div className="flex-row">
               <Thermometer size={16} className="text-warning" />
-              <span>Fever: 38.2°C</span>
+              <span>{doctorSummary.temperatures[0] ? `Temp: ${doctorSummary.temperatures[0].value}${doctorSummary.temperatures[0].unit}` : 'No temperature logs yet'}</span>
             </div>
-            <span>7:00 AM</span>
+            <span>{doctorSummary.temperatures[0] ? new Date(doctorSummary.temperatures[0].occurredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</span>
           </div>
         </div>
         <div className="card" style={{ borderLeft: '4px solid var(--primary)' }}>
           <div className="flex-row space-between text-sm">
             <div className="flex-row">
               <Pill size={16} className="text-primary" />
-              <span>Tylenol (1.5ml)</span>
+              <span>{doctorSummary.medications[0] ? `${doctorSummary.medications[0].medicationName} (${doctorSummary.medications[0].dosage})` : 'No medication logs yet'}</span>
             </div>
-            <span>7:15 AM</span>
+            <span>{doctorSummary.medications[0] ? new Date(doctorSummary.medications[0].occurredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</span>
           </div>
         </div>
       </section>
@@ -188,11 +201,15 @@ export const HealthScreen = () => {
           <div className="flex-row space-between">
             <div>
               <div className="text-xs text-muted">Last Weight</div>
-              <div className="font-bold">3.8 {prefs.weight}</div>
+              <div className="font-bold">
+                {doctorSummary.growthMeasurements[0]?.weight ?? '--'} {doctorSummary.growthMeasurements[0]?.weightUnit ?? prefs.weight}
+              </div>
             </div>
             <div>
-              <div className="text-xs text-muted">Change</div>
-              <div className="text-success font-bold">+400g</div>
+              <div className="text-xs text-muted">Last Length</div>
+              <div className="text-success font-bold">
+                {doctorSummary.growthMeasurements[0]?.length ?? '--'} {doctorSummary.growthMeasurements[0]?.lengthUnit ?? 'cm'}
+              </div>
             </div>
             <ChevronRight size={20} className="text-muted" />
           </div>
